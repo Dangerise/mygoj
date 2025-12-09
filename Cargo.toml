@@ -1,0 +1,11 @@
+[workspace]
+resolver = "3"
+members = ["crates/testbox"]
+
+[workspace.dependencies]
+clap = "4.5.53"
+libc = "0.2.178"
+serde = { version = "1.0.228", features = ["derive"] }
+thiserror = "2.0.17"
+nix = { version = "0.30.1", features = ["process"] }
+tokio = "1.48.0"
