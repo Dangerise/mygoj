@@ -1,5 +1,6 @@
 use super::*;
 use std::ffi::OsString;
+use std::io::{Read, Write};
 use std::process::{Command, Stdio};
 use tokio::fs;
 use wait4::Wait4;
@@ -26,62 +27,97 @@ impl TestBox for LinuxTestBox {
             fs::remove_dir_all(&self.config.root).await?;
         }
         fs::create_dir_all(&self.config.root).await?;
-        fs::write(self.config.root.join("stdin"), stdin).await?;
         fs::copy(path, &self.config.root.join("prog")).await?;
 
         let mut private = OsString::from("--private=");
         private.push(&self.config.root);
 
-        let mut run_command = OsString::from("./prog ");
-        for item in args {
-            run_command.push(item);
-            run_command.push(" ");
-        }
-        run_command.push("< stdin > stdout");
-        
-        dbg!(&run_command);
-
         let start = std::time::Instant::now();
 
-        let mut child = Command::new("firejail")
+        let mut command = Command::new("firejail");
+
+        command
             .arg(&private)
-            .arg(&format!("--rlimit-as={}", self.config.memory_limit))
+            .arg(&format!("--rlimit-as={}", self.config.memory_limit * 2))
             .arg(&format!(
                 "--rlimit-cpu={}",
                 self.config.time_limit.as_secs_f64().ceil() as u32
             ))
             .arg(&format!("--rlimit-nproc=4"))
-            .arg("bash")
-            .arg("-c")
-            .arg(&run_command)
-            .stdout(Stdio::null())
-            .stdin(Stdio::null())
+            .arg("./prog");
+
+        for item in args {
+            command.arg(item);
+        }
+
+        let mut child = command
+            .stdin(Stdio::piped())
+            .stdout(Stdio::piped())
             .stderr(Stdio::null())
             .spawn()?;
 
         let pid = child.id();
 
+        let stdin_data = stdin.as_ref().to_owned();
+        let mut stdin = child.stdin.take().unwrap();
+        let mut stdout = child.stdout.take().unwrap();
+
+        let stdin = tokio::task::spawn_blocking(move || stdin.write_all(&stdin_data));
+        let stdout = tokio::task::spawn_blocking(move || {
+            let mut data = Vec::new();
+            stdout.read_to_end(&mut data)?;
+            Ok::<_, std::io::Error>(data)
+        });
+
         let proc = tokio::task::spawn_blocking(move || child.wait4());
 
+        let mut status = Status::Okay;
+
+        let pid = nix::unistd::Pid::from_raw(pid as i32);
+        let kill = async || {
+            let sigkill = nix::sys::signal::SIGKILL;
+            tokio::task::spawn_blocking(move || nix::sys::signal::kill(pid, sigkill))
+                .await
+                .map_err(map_err)??;
+            Ok::<_, Error>(())
+        };
+
+        let mut system = sysinfo::System::new();
         while !proc.is_finished() {
             if start.elapsed() > self.config.time_limit {
-                let pid = nix::unistd::Pid::from_raw(pid as i32);
-                let sigkill = nix::sys::signal::SIGKILL;
-                tokio::task::spawn_blocking(move || nix::sys::signal::kill(pid, sigkill))
-                    .await
-                    .map_err(map_err)??;
+                kill().await?;
+                status = Status::TimeLimitExceed;
+                break;
             }
-            tokio::time::sleep(Duration::from_millis(100)).await;
+            let memory = system.refresh_processes_specifics(
+                sysinfo::ProcessesToUpdate::Some(&[sysinfo::Pid::from_u32(pid.as_raw() as u32)]),
+                false,
+                sysinfo::ProcessRefreshKind::nothing().with_memory(),
+            );
+            if memory as u64 > self.config.memory_limit {
+                kill().await?;
+                status = Status::MemoryLimitExceed;
+                break;
+            }
+            // tokio::time::sleep(Duration::from_millis(100)).await;
         }
+
+        stdin.await.map_err(map_err)??;
+        let stdout = stdout.await.map_err(map_err)??;
 
         let res = proc.await.map_err(map_err)??;
 
-        let stdout = fs::read(self.config.root.join("stdout")).await?;
+        if res.rusage.maxrss > self.config.memory_limit {
+            status = Status::MemoryLimitExceed;
+        } else if res.status.code() != Some(0) && status == Status::Okay {
+            status = Status::RuntimeError;
+        }
 
         Ok(RunResult {
             time_used: res.rusage.stime,
             memory_used: res.rusage.maxrss,
             exit_code: res.status.code(),
+            status,
             stdout,
         })
     }

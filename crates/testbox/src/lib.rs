@@ -18,6 +18,7 @@ pub struct RunResult {
     pub time_used: Duration,
     pub memory_used: u64,
     pub exit_code: Option<i32>,
+    pub status: Status,
     pub stdout: Vec<u8>,
 }
 
@@ -25,6 +26,14 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[cfg(target_os = "linux")]
 pub type PlatformTestBox = linux::LinuxTestBox;
+
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub enum Status {
+    Okay,
+    RuntimeError,
+    TimeLimitExceed,
+    MemoryLimitExceed,
+}
 
 pub trait TestBox
 where
