@@ -6,8 +6,8 @@ edition = "2024"
 [dependencies]
 clap.workspace = true
 serde.workspace = true
-sysinfo = "0.37.2"
 thiserror.workspace = true
+sysinfo.workspace=true
 tokio = { workspace = true, features = ["fs", "process", "rt", "time"] }
 wait4 = "0.1.3"
 

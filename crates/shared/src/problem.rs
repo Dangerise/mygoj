@@ -1,6 +1,9 @@
 use super::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Pid(String);
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProblemFront {
     #[serde(default)]
     pub pid: String,

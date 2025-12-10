@@ -1,6 +1,9 @@
 use super::*;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Rid(u64);
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub enum JudgeStatus {
     Judging,
     Ac,

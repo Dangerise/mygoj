@@ -11,5 +11,6 @@ eyre.workspace = true
 reqwest = { workspace = true }
 shared = { path = "../shared" }
 web-sys = { version = "0.3.83", features = ["Window"] }
+uuid={workspace=true,features=["js"]}
 
 [features]

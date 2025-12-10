@@ -1,6 +1,6 @@
 use super::record::RECORDS;
 use salvo::prelude::*;
-use shared::record::{Record, JudgeStatus};
+use shared::record::{JudgeStatus, Record};
 use shared::submission::Submission;
 
 #[handler]

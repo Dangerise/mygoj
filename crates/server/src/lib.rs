@@ -1,3 +1,4 @@
+mod judge;
 mod problem;
 mod record;
 mod submission;
@@ -32,6 +33,8 @@ async fn index(resp: &mut Response) {
 pub async fn main() -> eyre::Result<()> {
     tracing_subscriber::fmt().init();
 
+    tokio::spawn(judge::check_alive());
+
     let acceptor = TcpListener::new("0.0.0.0:5800").bind().await;
 
     let router = Router::new()
@@ -39,11 +42,17 @@ pub async fn main() -> eyre::Result<()> {
         .push(Router::with_path("problem/{*id}").get(index))
         .push(Router::with_path("submit/{*id}").get(index))
         .push(Router::with_path("record/{*id}").get(index))
+        .push(Router::with_path("judge-status").get(index))
         .push(
             Router::with_path("api")
                 .push(Router::with_path("problem_front").get(problem::problem_front))
                 .push(Router::with_path("submit").post(submission::receive_submission))
-                .push(Router::with_path("record").get(record::get_record)),
+                .push(Router::with_path("record").get(record::get_record))
+                .push(
+                    Router::with_path("judge-signal")
+                        .post(judge::receive_signal)
+                        .get(judge::get_signals),
+                ),
         )
         .push(Router::with_path("{*path}").get(static_embed::<Front>()));
 

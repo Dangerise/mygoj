@@ -27,7 +27,9 @@ mod inner {
                 code { "{code}" }
             }
         } else {
-            rsx! {p { "Loading" }}
+            rsx! {
+                p { "Loading" }
+            }
         }
     }
 }
