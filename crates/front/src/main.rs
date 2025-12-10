@@ -1,74 +1,36 @@
+use dioxus::logger::tracing::{self, Level};
 use dioxus::prelude::*;
+use std::sync::LazyLock;
+
+mod problem;
+
+static SERVER_ORIGIN: LazyLock<String> = LazyLock::new(|| {
+    // #[cfg(not(debug_assertions))]
+    // {
+    web_sys::window().unwrap().origin()
+    // }
+    // #[cfg(debug_assertions)]
+    // {
+    //     "http://localhost:5800".to_string()
+    // }
+});
 
 #[derive(Debug, Clone, Routable, PartialEq)]
-#[rustfmt::skip]
 enum Route {
     #[layout(Navbar)]
     #[route("/")]
     Home {},
-    #[route("/blog/:id")]
-    Blog { id: i32 },
+    #[route("/problem/:pid")]
+    Problem { pid: String },
 }
 
-fn main() {
-    dioxus::launch(App);
-}
+use problem::Problem;
 
 #[component]
-fn App() -> Element {
-    rsx! {
-        Router::<Route> {}
-    }
-}
-
-#[component]
-pub fn Hero() -> Element {
-    rsx! {
-        div {
-            id: "hero",
-            div { id: "links",
-                a { href: "https://dioxuslabs.com/learn/0.7/", "📚 Learn Dioxus" }
-                a { href: "https://dioxuslabs.com/awesome", "🚀 Awesome Dioxus" }
-                a { href: "https://github.com/dioxus-community/", "📡 Community Libraries" }
-                a { href: "https://github.com/DioxusLabs/sdk", "⚙️ Dioxus Development Kit" }
-                a { href: "https://marketplace.visualstudio.com/items?itemName=DioxusLabs.dioxus", "💫 VSCode Extension" }
-                a { href: "https://discord.gg/XgGxMSkvUM", "👋 Community Discord" }
-            }
-        }
-    }
-}
-
-/// Home page
-#[component]
+// #[allow(non_snake_case)]
 fn Home() -> Element {
     rsx! {
-        Hero {}
-
-    }
-}
-
-/// Blog page
-#[component]
-pub fn Blog(id: i32) -> Element {
-    rsx! {
-        div {
-            id: "blog",
-
-            // Content
-            h1 { "This is blog #{id}!" }
-            p { "In blog #{id}, we show how the Dioxus router works and how URL parameters can be passed as props to our route components." }
-
-            // Navigation links
-            Link {
-                to: Route::Blog { id: id - 1 },
-                "Previous"
-            }
-            span { " <---> " }
-            Link {
-                to: Route::Blog { id: id + 1 },
-                "Next"
-            }
-        }
+        h1 { "It's Mygoj !!! " }
     }
 }
 
@@ -76,18 +38,20 @@ pub fn Blog(id: i32) -> Element {
 #[component]
 fn Navbar() -> Element {
     rsx! {
-        div {
-            id: "navbar",
-            Link {
-                to: Route::Home {},
-                "Home"
-            }
-            Link {
-                to: Route::Blog { id: 1 },
-                "Blog"
-            }
-        }
-
         Outlet::<Route> {}
     }
+}
+
+#[component]
+fn app() -> Element {
+    rsx! {
+        Router::<Route>{}
+    }
+}
+
+fn main() {
+    dioxus::logger::init(Level::INFO).expect("logger init");
+    std::panic::set_hook(Box::new(|info| error!("Panic Occured\n{}", info)));
+
+    launch(app);
 }

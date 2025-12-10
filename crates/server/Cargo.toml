@@ -4,9 +4,13 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+dirs.workspace = true
 eyre.workspace = true
-rust-embed = "8.9.0"
-salvo = { workspace = true, features = ["serve-static"] }
+rust-embed.workspace = true
+salvo = { workspace = true, features = ["eyre", "serve-static"] }
+serde.workspace = true
+serde_json.workspace = true
+shared = { path = "../shared" }
 tokio = { workspace = true, features = ["full"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true

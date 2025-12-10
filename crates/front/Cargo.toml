@@ -7,6 +7,9 @@ edition = "2024"
 
 [dependencies]
 dioxus = { version = "0.7.2", features = ["router", "web"] }
+eyre.workspace = true
 reqwest = { workspace = true }
+shared = { path = "../shared" }
+web-sys = { version = "0.3.83", features = ["Window"] }
 
 [features]
