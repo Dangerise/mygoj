@@ -1,6 +1,8 @@
 use dioxus::logger::tracing::{self, Level};
 use dioxus::prelude::*;
 use std::sync::LazyLock;
+use shared::problem::Pid;
+use shared::record::Rid;
 
 mod judge_status;
 mod problem;
@@ -24,11 +26,11 @@ enum Route {
     #[route("/")]
     Home {},
     #[route("/problem/:pid")]
-    Problem { pid: String },
+    Problem { pid: Pid },
     #[route("/submit/:pid")]
-    Submit { pid: String },
+    Submit { pid: Pid },
     #[route("/record/:rid")]
-    Record { rid: u64 },
+    Record { rid: Rid },
     #[route("/judge-status")]
     JudgeStatus {},
 }

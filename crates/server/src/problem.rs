@@ -34,7 +34,7 @@ pub async fn problem_front(req: &mut Request, resp: &mut Response) -> eyre::Resu
 
     let config = fs::read_to_string(&path).await?;
     let mut problem: Problem = serde_json::from_str(&config)?;
-    problem.front.pid = pid.clone();
+    problem.front.pid = Pid(pid);
 
     tracing::info!("response problem front {:?}", &problem.front);
 

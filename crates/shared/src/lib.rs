@@ -5,7 +5,7 @@ pub mod problem;
 pub mod record;
 pub mod submission;
 
-// use problem::*;
+use problem::*;
 // use submission::*;
 use record::*;
 // use judge::*;

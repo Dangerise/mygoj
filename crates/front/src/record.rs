@@ -2,8 +2,8 @@ use super::*;
 
 mod inner {
     use super::SERVER_ORIGIN;
-    use shared::record::Record;
-    async fn get_record(rid: u64) -> eyre::Result<Record> {
+    use shared::record::{Record, Rid};
+    async fn get_record(rid: Rid) -> eyre::Result<Record> {
         let url = format!("{}/api/record?rid={}", *SERVER_ORIGIN, rid);
         let record = reqwest::get(url).await?.json().await?;
         Ok(record)
@@ -11,7 +11,7 @@ mod inner {
 
     use dioxus::prelude::*;
     #[component]
-    pub fn record_page(rid: u64) -> Element {
+    pub fn record_page(rid: Rid) -> Element {
         let record = use_resource(move || async move { get_record(rid).await });
         if let Some(record) = &*record.read() {
             let record = record.as_ref().unwrap();
@@ -36,7 +36,7 @@ mod inner {
 use inner::record_page;
 
 #[component]
-pub fn Record(rid: u64) -> Element {
+pub fn Record(rid: Rid) -> Element {
     rsx! {
         record_page { rid }
     }
