@@ -4,7 +4,8 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-dashmap.workspace=true
+chrono.workspace = true
+dashmap.workspace = true
 dirs.workspace = true
 eyre.workspace = true
 rust-embed.workspace = true
@@ -15,5 +16,4 @@ shared = { path = "../shared" }
 tokio = { workspace = true, features = ["full"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
-uuid.workspace=true
-chrono.workspace=true
+uuid.workspace = true

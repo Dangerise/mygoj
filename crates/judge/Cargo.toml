@@ -4,10 +4,10 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+chrono.workspace = true
 eyre.workspace = true
 reqwest = { workspace = true }
 shared = { path = "../shared" }
-tokio={workspace=true,features=["full"]}
-sysinfo={workspace=true}
-uuid.workspace=true
-chrono.workspace=true
+sysinfo = { workspace = true }
+tokio = { workspace = true, features = ["full"] }
+uuid.workspace = true
