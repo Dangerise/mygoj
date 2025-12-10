@@ -5,5 +5,8 @@ edition = "2024"
 
 [dependencies]
 eyre.workspace = true
-salvo = { workspace = true }
+rust-embed = "8.9.0"
+salvo = { workspace = true, features = ["serve-static"] }
 tokio = { workspace = true, features = ["full"] }
+tracing.workspace = true
+tracing-subscriber.workspace = true

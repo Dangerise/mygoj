@@ -1,4 +1,4 @@
 #[tokio::main]
-async fn main() -> eyre::Result<()> {
-    Ok(())
+async fn main() {
+    server::main().await.unwrap();
 }
