@@ -18,7 +18,7 @@ fn loading_page() -> Element {
 #[component]
 fn wrong_page() -> Element {
     rsx! {
-        p {  "Something goes wrong "}
+        p { "Something goes wrong " }
     }
 }
 
@@ -33,6 +33,7 @@ fn render_problem(front: ProblemFront) -> Element {
     rsx! {
         h1 { "{pid} {title}" }
         p { "{statement}" }
+        Link { to: Route::Submit { pid }, "To submit" }
     }
 }
 
@@ -48,18 +49,18 @@ pub fn Problem(pid: String) -> Element {
     if let Some(front) = &*front.read() {
         match front {
             Ok(front) => rsx! {
-                render_problem { front:front.clone() }
+                render_problem { front: front.clone() }
             },
             Err(err) => {
                 tracing::error!("error {:?}", err);
                 rsx! {
-                    wrong_page {  }
+                    wrong_page {}
                 }
             }
         }
     } else {
         rsx! {
-            loading_page{}
+            loading_page {}
         }
     }
 }

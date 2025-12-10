@@ -3,6 +3,8 @@ use dioxus::prelude::*;
 use std::sync::LazyLock;
 
 mod problem;
+mod record;
+mod submit;
 
 static SERVER_ORIGIN: LazyLock<String> = LazyLock::new(|| {
     // #[cfg(not(debug_assertions))]
@@ -22,9 +24,15 @@ enum Route {
     Home {},
     #[route("/problem/:pid")]
     Problem { pid: String },
+    #[route("/submit/:pid")]
+    Submit { pid: String },
+    #[route("/record/:rid")]
+    Record { rid: u64 },
 }
 
 use problem::Problem;
+use record::Record;
+use submit::Submit;
 
 #[component]
 // #[allow(non_snake_case)]
@@ -45,13 +53,16 @@ fn Navbar() -> Element {
 #[component]
 fn app() -> Element {
     rsx! {
-        Router::<Route>{}
+        Router::<Route> {}
     }
 }
 
 fn main() {
     dioxus::logger::init(Level::INFO).expect("logger init");
-    std::panic::set_hook(Box::new(|info| error!("Panic Occured\n{}", info)));
+    std::panic::set_hook(Box::new(|info| {
+        error!("Panic Occured\n{}", info);
+        let _ = web_sys::window().unwrap().alert_with_message("panic");
+    }));
 
     launch(app);
 }
