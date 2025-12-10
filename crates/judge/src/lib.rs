@@ -5,7 +5,7 @@ use std::sync::LazyLock;
 use std::time::Duration;
 use uuid::Uuid;
 
-const SERVER_ORIGN: &'static str = "http://localhost:5800";
+const SERVER_ORIGN: &'static str = "http://192.168.1.107:5800";
 static UUID: LazyLock<Uuid> = LazyLock::new(|| Uuid::new_v4());
 
 use reqwest::Client;
