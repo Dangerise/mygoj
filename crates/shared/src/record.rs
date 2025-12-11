@@ -4,44 +4,30 @@ use super::*;
 pub struct Rid(pub u64);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub enum JudgeStatus {
+pub enum RecordStatus {
     Waiting,
-    Judging,
-    Ac,
-    Wa,
-    Tle,
-    Mle,
-    Re,
-    Uke,
+    Compiling,
+    CompileError(CompileError),
+    Running,
+    Completed(AllJudgeResult),
 }
 
-impl std::fmt::Display for JudgeStatus {
+impl std::fmt::Display for RecordStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Waiting => {
                 write!(f, "Waiting")
             }
-            Self::Judging => {
-                write!(f, "Judging")
+            Self::Compiling => {
+                write!(f, "Compling")
             }
-            Self::Ac => {
-                write!(f, "Accepted")
+            Self::CompileError(_) => {
+                write!(f, "Compile Error")
             }
-            Self::Wa => {
-                write!(f, "Wrong Answer")
+            Self::Running => {
+                write!(f, "Running")
             }
-            Self::Re => {
-                write!(f, "Runtime Error")
-            }
-            Self::Tle => {
-                write!(f, "Time Limit Exceed")
-            }
-            Self::Mle => {
-                write!(f, "Memory Limit Exceed")
-            }
-            Self::Uke => {
-                write!(f, "Unknown Error")
-            }
+            Self::Completed(res) => res.verdict.fmt(f),
         }
     }
 }
@@ -51,7 +37,7 @@ pub struct Record {
     pub rid: Rid,
     pub pid: Pid,
     pub code: String,
-    pub status: JudgeStatus,
+    pub status: RecordStatus,
 }
 
 impl std::fmt::Display for Rid {

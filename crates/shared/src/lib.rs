@@ -8,4 +8,4 @@ pub mod submission;
 use problem::*;
 // use submission::*;
 use record::*;
-// use judge::*;
+use judge::*;

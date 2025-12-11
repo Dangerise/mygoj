@@ -25,11 +25,31 @@ pub struct ProblemFile {
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ProblemFileRequest {
+    pub pid: Pid,
+    pub name: CompactString,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProblemData {
+    pub pid: Pid,
     pub testcases: Vec<Testcase>,
     pub files: Vec<ProblemFile>,
     pub time_limit: u32,
     pub memory_limit: u32,
+}
+
+impl ProblemData {
+    pub fn check_unique(&self) -> bool {
+        for i in 0..self.files.len() {
+            for j in i + 1..self.files.len() {
+                if self.files[i].name == self.files[j].name {
+                    return false;
+                }
+            }
+        }
+        true
+    }
 }
 
 impl Pid {

@@ -2477,13 +2477,19 @@ name = "judge"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "compact_str",
+ "dirs",
  "eyre",
  "reqwest",
  "serde",
  "shared",
+ "static_init",
  "sysinfo",
+ "tempfile",
  "testbox",
  "tokio",
+ "tracing",
+ "tracing-subscriber",
  "uuid",
 ]
 
@@ -4241,6 +4247,8 @@ dependencies = [
  "chrono",
  "compact_str",
  "serde",
+ "thiserror 2.0.17",
+ "tracing",
  "uuid",
 ]
 

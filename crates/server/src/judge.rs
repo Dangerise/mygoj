@@ -1,6 +1,6 @@
 use salvo::prelude::*;
 use shared::judge::*;
-use shared::record::Rid;
+use shared::record::*;
 use static_init::dynamic;
 use std::collections::HashMap;
 use std::collections::VecDeque;
@@ -34,9 +34,56 @@ pub async fn check_alive() {
     }
 }
 
+async fn generate_command() -> eyre::Result<JudgeCommand> {
+    let mut queue = JUDGE_QUEUE.lock().await;
+    if queue.is_empty() {
+        Ok(JudgeCommand::Null)
+    } else {
+        let rid = queue.pop_front().unwrap();
+        Ok(JudgeCommand::Judge(rid))
+    }
+}
+
+use super::problem::{problem_data, send_problem_file};
+use super::record::{get_record, update_record};
+
 #[handler]
-pub async fn connect(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
-    let signal: JudgeSignal = req.parse_json().await?;
+pub async fn receive_message(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
+    let msg: JudgeMessage = req.parse_json().await?;
+    match msg {
+        JudgeMessage::Signal(sig) => {
+            let command = receive_signal(sig).await?;
+            resp.render(Json(command));
+        }
+
+        JudgeMessage::GetProblemData(pid) => {
+            let problem_data = problem_data(pid).await?;
+            resp.render(Json(problem_data));
+        }
+        JudgeMessage::GetProblemFile(pid, filename) => {
+            send_problem_file(pid, &filename, resp).await?
+        }
+        JudgeMessage::GetRecord(rid) => {
+            let record = get_record(rid).await?;
+            resp.render(Json(record));
+        }
+        JudgeMessage::SendCompileResult(rid, res) => {
+            let status = match res {
+                CompileResult::Compiled => RecordStatus::Running,
+                CompileResult::Error(ce) => RecordStatus::CompileError(ce),
+            };
+            update_record(rid, status).await?;
+            resp.render(Json(()));
+        }
+        JudgeMessage::SendAllJudgeResults(rid, res) => {
+            update_record(rid, RecordStatus::Completed(res)).await?;
+            resp.render(Json(()));
+        }
+    }
+    Ok(())
+}
+
+pub async fn receive_signal(signal: JudgeSignal) -> eyre::Result<JudgeCommand> {
     let uuid = signal.uuid;
     let mut signals = SIGNALS.lock().await;
     tracing::info!("received signal {:?}", &signal);
@@ -46,8 +93,9 @@ pub async fn connect(req: &mut Request, resp: &mut Response) -> eyre::Result<()>
         tracing::info!("new judge machine online {}", uuid);
         signals.insert(uuid, signal);
     }
-    resp.render(Json(Command::Null));
-    Ok(())
+
+    let command = generate_command().await?;
+    Ok(command)
 }
 
 #[handler]

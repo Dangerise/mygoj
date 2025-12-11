@@ -24,7 +24,7 @@ mod inner {
             rsx! {
                 p { "Problem {pid}" }
                 p { "Status {status}" }
-                code { "{code}" }
+                textarea { "{code}" }
             }
         } else {
             rsx! {

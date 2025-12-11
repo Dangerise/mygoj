@@ -4,34 +4,55 @@ mod judge;
 use serde::de::DeserializeOwned;
 use shared::judge::*;
 use shared::record::*;
-use std::sync::LazyLock;
+use std::path::PathBuf;
+use std::sync::{LazyLock, OnceLock};
 use std::time::Duration;
+use tokio::fs;
+use tracing::instrument;
 use uuid::Uuid;
 
-const SERVER_ORIGN: &'static str = "http://192.168.1.107:5800";
+static DIR: OnceLock<PathBuf> = OnceLock::new();
+
 static UUID: LazyLock<Uuid> = LazyLock::new(|| Uuid::new_v4());
 
-async fn accquire<T>(path: String) -> eyre::Result<T>
+const SERVER_ORIGN: &'static str = "http://192.168.1.107:5800";
+
+async fn send_message<T>(msg: JudgeMessage) -> eyre::Result<T>
 where
     T: DeserializeOwned,
 {
-    let url = format!("{}/api/{}", SERVER_ORIGN, path);
-    let res = reqwest::get(url).await?.json().await?;
+    let res = Client::new()
+        .get(format!("{}/api/judge", SERVER_ORIGN))
+        .json(&msg)
+        .send()
+        .await?
+        .json()
+        .await?;
     Ok(res)
 }
 
-async fn execute(command: Command) -> eyre::Result<()> {
+async fn get_bin(msg: JudgeMessage) -> eyre::Result<Vec<u8>> {
+    let res = Client::new()
+        .get(format!("{}/api/judge", SERVER_ORIGN))
+        .json(&msg)
+        .send()
+        .await?
+        .bytes()
+        .await?;
+    let res = &*res;
+    Ok(Vec::from(res))
+}
+
+async fn execute(command: JudgeCommand) -> eyre::Result<()> {
     match command {
-        Command::Judge(rid) => judge::judge(rid).await?,
-        Command::Null => {}
+        JudgeCommand::Judge(rid) => judge::judge(rid).await.unwrap(),
+        JudgeCommand::Null => {}
     }
     Ok(())
 }
 
 use reqwest::Client;
 async fn connect() {
-    let client = Client::new();
-    let url = format!("{}/api/judge/connect", SERVER_ORIGN);
     let mut system = sysinfo::System::new_all();
     let cpus = system.cpus();
     dbg!(&cpus);
@@ -54,21 +75,22 @@ async fn connect() {
             uuid: *UUID,
             timestamp: chrono::Utc::now().timestamp_millis() as u64,
         };
-        let command: Command = client
-            .post(url.clone())
-            .json(&signal)
-            .send()
-            .await
-            .unwrap()
-            .json()
-            .await
-            .unwrap();
+        let command: JudgeCommand = send_message(JudgeMessage::Signal(signal)).await.unwrap();
         tokio::spawn(execute(command));
         tokio::time::sleep(Duration::from_millis(1000)).await;
     }
 }
 
 pub async fn main() -> eyre::Result<()> {
+    tracing_subscriber::fmt().init();
+
+    DIR.set(dirs::home_dir().unwrap().join("mygoj_judge")).unwrap();
+
+    let dir = DIR.get().unwrap();
+    if !dir.exists() {
+        fs::create_dir_all(dir).await.unwrap();
+    }
+
     tokio::spawn(connect());
     loop {
         tokio::time::sleep(Duration::from_millis(1000)).await;
