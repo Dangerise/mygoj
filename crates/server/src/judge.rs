@@ -1,18 +1,18 @@
 use salvo::prelude::*;
 use shared::judge::*;
 use shared::record::Rid;
+use static_init::dynamic;
 use std::collections::HashMap;
 use std::collections::VecDeque;
-use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use uuid::Uuid;
 
-pub static JUDGE_QUEUE: LazyLock<Mutex<VecDeque<Rid>>> =
-    LazyLock::new(|| Mutex::new(VecDeque::new()));
+#[dynamic]
+pub static JUDGE_QUEUE: Mutex<VecDeque<Rid>> = Mutex::new(VecDeque::new());
 
-static SIGNALS: LazyLock<Mutex<HashMap<Uuid, JudgeSignal>>> =
-    LazyLock::new(|| Mutex::new(HashMap::new()));
+#[dynamic]
+static SIGNALS: Mutex<HashMap<Uuid, JudgeSignal>> = Mutex::new(HashMap::new());
 
 pub async fn check_alive() {
     let mut to_remove = Vec::new();

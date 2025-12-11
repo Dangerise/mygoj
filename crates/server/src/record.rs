@@ -1,9 +1,10 @@
 use salvo::prelude::*;
 use shared::record::Record;
-use std::sync::LazyLock;
+use static_init::dynamic;
 use tokio::sync::RwLock;
 
-pub static RECORDS: LazyLock<RwLock<Vec<Record>>> = LazyLock::new(|| RwLock::new(Vec::new()));
+#[dynamic]
+pub static RECORDS: RwLock<Vec<Record>> = RwLock::new(Vec::new());
 
 #[handler]
 pub async fn get_record(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
@@ -11,7 +12,7 @@ pub async fn get_record(req: &mut Request, resp: &mut Response) -> eyre::Result<
 
     tracing::info!("query rid {rid}");
 
-    let records = RECORDS.read().await;
+    let records=RECORDS.read().await;
     let record = records.get(rid as usize).unwrap();
     resp.render(Json(record));
 
