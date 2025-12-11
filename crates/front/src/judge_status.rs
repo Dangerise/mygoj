@@ -2,7 +2,7 @@ use super::*;
 use shared::judge::JudgeSignal;
 
 async fn get_judge_signals() -> eyre::Result<Vec<JudgeSignal>> {
-    let url = format!("{}/api/judge-signal", *SERVER_ORIGIN);
+    let url = format!("{}/api/judge_machines", *SERVER_ORIGIN);
     let signals: Vec<JudgeSignal> = reqwest::get(url).await?.json().await?;
     Ok(signals)
 }
@@ -28,6 +28,7 @@ fn display_single(sig: JudgeSignal) -> Element {
         p { "{hostname}" }
         p { "CPU usage {cpu_usage}%" }
         p { "tasks {len}" }
+        hr {  }
     }
 }
 
@@ -42,7 +43,6 @@ fn display_signals(judge_signals: Vec<JudgeSignal>) -> Element {
             for item in &judge_signals {
                 display_single { sig: item.clone() }
             }
-            hr {}
         }
     }
 }

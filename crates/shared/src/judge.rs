@@ -10,3 +10,9 @@ pub struct JudgeSignal {
     pub uuid: uuid::Uuid,
     pub timestamp: u64,
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum Command {
+    Judge(Rid),
+    Null,
+}

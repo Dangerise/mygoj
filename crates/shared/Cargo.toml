@@ -7,3 +7,4 @@ edition = "2024"
 chrono.workspace = true
 serde.workspace = true
 uuid.workspace = true
+compact_str.workspace=true

@@ -1,10 +1,15 @@
 use salvo::prelude::*;
-use shared::judge::JudgeSignal;
+use shared::judge::*;
+use shared::record::Rid;
 use std::collections::HashMap;
+use std::collections::VecDeque;
 use std::sync::LazyLock;
 use std::time::Duration;
 use tokio::sync::Mutex;
 use uuid::Uuid;
+
+pub static JUDGE_QUEUE: LazyLock<Mutex<VecDeque<Rid>>> =
+    LazyLock::new(|| Mutex::new(VecDeque::new()));
 
 static SIGNALS: LazyLock<Mutex<HashMap<Uuid, JudgeSignal>>> =
     LazyLock::new(|| Mutex::new(HashMap::new()));
@@ -30,7 +35,7 @@ pub async fn check_alive() {
 }
 
 #[handler]
-pub async fn receive_signal(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
+pub async fn connect(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
     let signal: JudgeSignal = req.parse_json().await?;
     let uuid = signal.uuid;
     let mut signals = SIGNALS.lock().await;
@@ -41,12 +46,12 @@ pub async fn receive_signal(req: &mut Request, resp: &mut Response) -> eyre::Res
         tracing::info!("new judge machine online {}", uuid);
         signals.insert(uuid, signal);
     }
-    resp.render("okay");
+    resp.render(Json(Command::Null));
     Ok(())
 }
 
 #[handler]
-pub async fn get_signals(_req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
+pub async fn judge_machines(_req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
     resp.render(Json(
         SIGNALS
             .lock()

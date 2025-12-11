@@ -48,10 +48,10 @@ pub async fn main() -> eyre::Result<()> {
                 .push(Router::with_path("problem_front").get(problem::problem_front))
                 .push(Router::with_path("submit").post(submission::receive_submission))
                 .push(Router::with_path("record").get(record::get_record))
+                .push(Router::with_path("judge_machines").get(judge::judge_machines))
                 .push(
-                    Router::with_path("judge-signal")
-                        .post(judge::receive_signal)
-                        .get(judge::get_signals),
+                    Router::with_path("judge")
+                        .push(Router::with_path("connect").post(judge::connect)),
                 ),
         )
         .push(Router::with_path("{*path}").get(static_embed::<Front>()));

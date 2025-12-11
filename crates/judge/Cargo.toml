@@ -7,7 +7,9 @@ edition = "2024"
 chrono.workspace = true
 eyre.workspace = true
 reqwest = { workspace = true }
+serde.workspace = true
 shared = { path = "../shared" }
 sysinfo = { workspace = true }
+testbox = { path = "../testbox" }
 tokio = { workspace = true, features = ["full"] }
 uuid.workspace = true

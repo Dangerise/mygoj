@@ -2467,8 +2467,10 @@ dependencies = [
  "chrono",
  "eyre",
  "reqwest",
+ "serde",
  "shared",
  "sysinfo",
+ "testbox",
  "tokio",
  "uuid",
 ]
@@ -4224,6 +4226,7 @@ name = "shared"
 version = "0.1.0"
 dependencies = [
  "chrono",
+ "compact_str",
  "serde",
  "uuid",
 ]

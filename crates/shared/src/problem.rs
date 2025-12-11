@@ -9,7 +9,26 @@ pub struct ProblemFront {
     pub pid: Pid,
     pub title: String,
     pub statement: String,
-    pub time_limit: f32,
+    pub time_limit: u32,
+    pub memory_limit: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct Testcase {
+    pub input_file: CompactString,
+    pub output_file: CompactString,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ProblemFile {
+    pub name: CompactString,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ProblemData {
+    pub testcases: Vec<Testcase>,
+    pub files: Vec<ProblemFile>,
+    pub time_limit: u32,
     pub memory_limit: u32,
 }
 
