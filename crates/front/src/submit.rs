@@ -16,7 +16,7 @@ async fn submit_code(submission: &Submission) -> eyre::Result<Rid> {
 
 #[component]
 pub fn Submit(pid: Pid) -> Element {
-    let mut code = use_signal(|| String::new());
+    let mut code = use_signal(String::new);
     let rid: Signal<Option<Rid>> = use_signal(|| None);
     if let Some(rid) = *rid.read() {
         let nav = navigator();
@@ -36,7 +36,7 @@ pub fn Submit(pid: Pid) -> Element {
                     code: code.cloned(),
                     pid: pid.clone(),
                 };
-                let mut rid = rid.clone();
+                let mut rid = rid;
                 spawn(async move {
                     let submission = submission;
                     let t = submit_code(&submission).await.unwrap();

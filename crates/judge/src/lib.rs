@@ -13,9 +13,9 @@ use uuid::Uuid;
 
 static DIR: OnceLock<PathBuf> = OnceLock::new();
 
-static UUID: LazyLock<Uuid> = LazyLock::new(|| Uuid::new_v4());
+static UUID: LazyLock<Uuid> = LazyLock::new(Uuid::new_v4);
 
-const SERVER_ORIGN: &'static str = "http://192.168.1.107:5800";
+const SERVER_ORIGN: &str = "http://192.168.1.107:5800";
 
 async fn send_message<T>(msg: JudgeMessage) -> eyre::Result<T>
 where

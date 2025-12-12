@@ -2,8 +2,7 @@ use salvo::prelude::*;
 use shared::judge::*;
 use shared::record::*;
 use static_init::dynamic;
-use std::collections::HashMap;
-use std::collections::VecDeque;
+use std::collections::{HashMap, VecDeque, hash_map};
 use std::time::Duration;
 use tokio::sync::Mutex;
 use uuid::Uuid;
@@ -87,11 +86,11 @@ pub async fn receive_signal(signal: JudgeSignal) -> eyre::Result<JudgeCommand> {
     let uuid = signal.uuid;
     let mut signals = SIGNALS.lock().await;
     tracing::info!("received signal {:?}", &signal);
-    if signals.contains_key(&uuid) {
-        *signals.get_mut(&uuid).unwrap() = signal;
-    } else {
+    if let hash_map::Entry::Vacant(e) = signals.entry(uuid) {
         tracing::info!("new judge machine online {}", uuid);
-        signals.insert(uuid, signal);
+        e.insert(signal);
+    } else {
+        *signals.get_mut(&uuid).unwrap() = signal;
     }
 
     let command = generate_command().await?;

@@ -5,7 +5,7 @@ use testbox::{PlatformTestBox, TestBox};
 use tokio::{fs, process};
 
 fn problem_file_path(pid: &Pid, file: &str) -> PathBuf {
-    DIR.get().unwrap().join("problem").join(&pid.0).join(&file)
+    DIR.get().unwrap().join("problem").join(&pid.0).join(file)
 }
 
 #[instrument]
@@ -91,7 +91,7 @@ async fn run_testcase(
     })
     .await?;
 
-    let input = fs::read(problem_file_path(&pid, &case.input_file)).await?;
+    let input = fs::read(problem_file_path(pid, &case.input_file)).await?;
     let run_result = testbox.run_single(prog, None, &input).await?;
 
     tracing::info!("run status {:?}", run_result.status);
@@ -125,7 +125,7 @@ async fn run_testcase(
         }
     };
 
-    let answer = fs::read_to_string(problem_file_path(&pid, &case.output_file)).await?;
+    let answer = fs::read_to_string(problem_file_path(pid, &case.output_file)).await?;
     ret.verdict = if comp::comp(&answer, &stdout) {
         Verdict::Ac
     } else {
@@ -147,10 +147,10 @@ pub async fn run_all_cases(
     for case in &problem_data.testcases {
         let res = run_testcase(
             &problem_data.pid,
-            &prog,
+            prog,
             problem_data.time_limit,
             problem_data.memory_limit,
-            &case,
+            case,
         )
         .await?;
         memory = u32::max(memory, res.memory_used);
@@ -203,17 +203,14 @@ pub async fn judge(rid: Rid) -> eyre::Result<()> {
     let prog = match compile(compile_dir.path(), &code).await {
         Ok(path) => path,
         Err(err) => {
-            match err.downcast_ref::<CompileError>() {
-                Some(ce) => {
-                    tracing::info!("compile error {:#?}", ce);
-                    let _: () = send_message(JudgeMessage::SendCompileResult(
-                        rid,
-                        CompileResult::Error(ce.clone()),
-                    ))
-                    .await?;
-                    return Ok(());
-                }
-                None => {}
+            if let Some(ce) = err.downcast_ref::<CompileError>() {
+                tracing::info!("compile error {:#?}", ce);
+                let _: () = send_message(JudgeMessage::SendCompileResult(
+                    rid,
+                    CompileResult::Error(ce.clone()),
+                ))
+                .await?;
+                return Ok(());
             }
             return Err(err);
         }

@@ -19,8 +19,8 @@ fn display_single(sig: JudgeSignal) -> Element {
         system_name,
     } = sig;
     let len = tasks.len();
-    let system_name = system_name.as_ref().map(String::as_str).unwrap_or("null");
-    let hostname = hostname.as_ref().map(String::as_str).unwrap_or("null");
+    let system_name = system_name.as_deref().unwrap_or("null");
+    let hostname = hostname.as_deref().unwrap_or("null");
     rsx! {
         p { "uuid {uuid}" }
         p { "CPU {cpu_name}" }
@@ -34,7 +34,7 @@ fn display_single(sig: JudgeSignal) -> Element {
 
 #[component]
 fn display_signals(judge_signals: Vec<JudgeSignal>) -> Element {
-    if judge_signals.len() == 0 {
+    if judge_signals.is_empty() {
         rsx! {
             p { "no judge machine connected yet" }
         }

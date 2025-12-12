@@ -38,12 +38,12 @@ impl TestBox for LinuxTestBox {
 
         command
             .arg(&private)
-            .arg(&format!("--rlimit-as={}", self.config.memory_limit * 2))
-            .arg(&format!(
+            .arg(format!("--rlimit-as={}", self.config.memory_limit * 2))
+            .arg(format!(
                 "--rlimit-cpu={}",
                 self.config.time_limit.as_secs_f64().ceil() as u32
             ))
-            .arg(&format!("--rlimit-nproc=4"))
+            .arg("--rlimit-nproc=4")
             .arg("./prog");
 
         for item in args {
