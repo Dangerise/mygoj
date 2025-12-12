@@ -1,3 +1,4 @@
+mod front;
 mod judge;
 mod problem;
 mod record;
@@ -45,10 +46,11 @@ pub async fn main() -> eyre::Result<()> {
         .push(Router::with_path("judge-status").get(index))
         .push(
             Router::with_path("api")
-                .push(Router::with_path("problem_front").get(problem::problem_front))
-                .push(Router::with_path("submit").post(submission::receive_submission))
-                .push(Router::with_path("record").get(record::get_record_handler))
-                .push(Router::with_path("judge_machines").get(judge::judge_machines))
+                .push(
+                    Router::with_path("front")
+                        .post(front::receive_front_message)
+                        .get(front::receive_front_message),
+                )
                 .push(
                     Router::with_path("judge")
                         .post(judge::receive_message)

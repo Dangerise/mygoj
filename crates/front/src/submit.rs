@@ -1,19 +1,6 @@
 use super::*;
 use shared::submission::*;
 
-async fn submit_code(submission: &Submission) -> eyre::Result<Rid> {
-    let url = format!("{}/api/submit", *SERVER_ORIGIN);
-    let client = reqwest::Client::new();
-    let rid: Rid = client
-        .post(url)
-        .json(submission)
-        .send()
-        .await?
-        .json()
-        .await?;
-    Ok(rid)
-}
-
 #[component]
 pub fn Submit(pid: Pid) -> Element {
     let mut code = use_signal(String::new);
@@ -39,7 +26,7 @@ pub fn Submit(pid: Pid) -> Element {
                 let mut rid = rid;
                 spawn(async move {
                     let submission = submission;
-                    let t = submit_code(&submission).await.unwrap();
+                    let t: Rid = send_message(FrontMessage::Submit(submission)).await.unwrap();
                     rid.set(Some(t));
                 });
             },

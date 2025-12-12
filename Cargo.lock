@@ -1747,6 +1747,7 @@ dependencies = [
  "dioxus",
  "eyre",
  "reqwest",
+ "serde",
  "shared",
  "uuid",
  "web-sys",

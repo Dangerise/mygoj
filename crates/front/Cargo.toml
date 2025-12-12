@@ -9,8 +9,9 @@ edition = "2024"
 dioxus = { version = "0.7.2", features = ["router", "web"] }
 eyre.workspace = true
 reqwest = { workspace = true }
+serde.workspace = true
 shared = { path = "../shared" }
+uuid = { workspace = true, features = ["js"] }
 web-sys = { version = "0.3.83", features = ["Window"] }
-uuid={workspace=true,features=["js"]}
 
 [features]

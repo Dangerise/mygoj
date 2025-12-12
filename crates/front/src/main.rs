@@ -1,8 +1,10 @@
 use dioxus::logger::tracing::{self, Level};
 use dioxus::prelude::*;
-use std::sync::LazyLock;
+use serde::de::DeserializeOwned;
+use shared::front::FrontMessage;
 use shared::problem::Pid;
 use shared::record::Rid;
+use std::sync::LazyLock;
 
 mod judge_status;
 mod problem;
@@ -19,6 +21,20 @@ static SERVER_ORIGIN: LazyLock<String> = LazyLock::new(|| {
     //     "http://localhost:5800".to_string()
     // }
 });
+
+async fn send_message<T>(msg: FrontMessage) -> eyre::Result<T>
+where
+    T: DeserializeOwned,
+{
+    let res = reqwest::Client::new()
+        .post(format!("{}/api/front", *SERVER_ORIGIN))
+        .json(&msg)
+        .send()
+        .await?
+        .json()
+        .await?;
+    Ok(res)
+}
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 enum Route {

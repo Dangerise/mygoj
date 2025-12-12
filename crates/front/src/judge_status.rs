@@ -1,12 +1,6 @@
 use super::*;
 use shared::judge::JudgeMachineSignal;
 
-async fn get_judge_signals() -> eyre::Result<Vec<JudgeMachineSignal>> {
-    let url = format!("{}/api/judge_machines", *SERVER_ORIGIN);
-    let signals: Vec<JudgeMachineSignal> = reqwest::get(url).await?.json().await?;
-    Ok(signals)
-}
-
 #[component]
 fn display_single(sig: JudgeMachineSignal) -> Element {
     let JudgeMachineSignal {
@@ -49,7 +43,9 @@ fn display_signals(judge_signals: Vec<JudgeMachineSignal>) -> Element {
 
 #[component]
 pub fn JudgeStatus() -> Element {
-    let mut judge_signals_res = use_resource(|| async { get_judge_signals().await });
+    let mut judge_signals_res = use_resource(|| async {
+        send_message::<Vec<JudgeMachineSignal>>(FrontMessage::CheckJudgeMachines).await
+    });
     if let Some(judge_signals) = &*judge_signals_res.read() {
         let judge_signals = judge_signals.as_ref().unwrap();
         rsx! {

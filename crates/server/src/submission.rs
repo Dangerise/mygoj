@@ -1,15 +1,10 @@
 use super::judge::JUDGE_QUEUE;
 use super::problem::problem_read_lock;
 use super::record::RECORDS;
-use salvo::prelude::*;
 use shared::record::{Record, RecordStatus, Rid};
 use shared::submission::Submission;
 
-#[handler]
-pub async fn receive_submission(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
-    let submission: Submission = req.parse_json().await?;
-    tracing::info!("get submission {:?}", &submission);
-
+pub async fn receive_submission(submission: Submission) -> eyre::Result<Rid> {
     let rid;
     {
         let mut records = RECORDS.write().await;
@@ -29,6 +24,5 @@ pub async fn receive_submission(req: &mut Request, resp: &mut Response) -> eyre:
         queue.push_back(rid);
     });
 
-    resp.render(Json(&rid));
-    Ok(())
+    Ok(rid)
 }

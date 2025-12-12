@@ -108,15 +108,12 @@ pub async fn receive_signal(signal: JudgeMachineSignal) -> eyre::Result<JudgeCom
     Ok(command)
 }
 
-#[handler]
-pub async fn judge_machines(_req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
-    resp.render(Json(
-        SIGNALS
-            .lock()
-            .await
-            .iter()
-            .map(|x| x.1.clone())
-            .collect::<Vec<_>>(),
-    ));
-    Ok(())
+pub async fn judge_machines() -> eyre::Result<Vec<JudgeMachineSignal>> {
+    let res = SIGNALS
+        .lock()
+        .await
+        .iter()
+        .map(|x| x.1.clone())
+        .collect::<Vec<_>>();
+    Ok(res)
 }

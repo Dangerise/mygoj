@@ -1,13 +1,6 @@
 use super::*;
 pub use shared::problem::ProblemFront;
 
-async fn get_problem_front(pid: &str) -> eyre::Result<ProblemFront> {
-    let url = format!("{}/api/problem_front?pid={}", *SERVER_ORIGIN, pid);
-    tracing::info!("get problem front from {url}");
-    let res = reqwest::get(url).await?.json().await?;
-    Ok(res)
-}
-
 #[component]
 fn loading_page() -> Element {
     rsx! {
@@ -41,12 +34,14 @@ fn render_problem(front: ProblemFront) -> Element {
 }
 
 #[component]
-pub fn Problem(pid: String) -> Element {
+pub fn Problem(pid: Pid) -> Element {
     let front = {
         let pid = pid.clone();
         use_resource(move || {
             let pid = pid.clone();
-            async move { get_problem_front(&pid).await }
+            async move {
+                send_message::<ProblemFront>(FrontMessage::GetProblemFront(pid)).await
+            }
         })
     };
     if let Some(front) = &*front.read() {

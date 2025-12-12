@@ -120,6 +120,7 @@ impl ProblemLock {
         }
     }
 
+    #[allow(dead_code)]
     pub async fn write_lock(&self) {
         let receiver;
         {
@@ -142,6 +143,7 @@ impl ProblemLock {
     }
 
     #[track_caller]
+    #[allow(dead_code)]
     pub fn write_unlock(&self) {
         let mut lock = self.inner.lock().unwrap();
         let Inner {

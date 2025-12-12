@@ -1,21 +1,16 @@
 use super::*;
 
 mod inner {
-    use super::SERVER_ORIGIN;
+    use super::send_message;
+    use dioxus::prelude::*;
+    use shared::front::FrontMessage;
     use shared::judge::{AllJudgeResult, SingleJudgeResult};
     use shared::record::*;
-    async fn get_record(rid: Rid) -> eyre::Result<Record> {
-        let url = format!("{}/api/record?rid={}", *SERVER_ORIGIN, rid);
-        let record = reqwest::get(url).await?.json().await?;
-        Ok(record)
-    }
-
-    use dioxus::prelude::*;
 
     #[component]
     fn show_all_results(status: Vec<Option<SingleJudgeResult>>) -> Element {
         rsx! {
-            for (idx,case) in status.into_iter().enumerate() {
+            for (idx , case) in status.into_iter().enumerate() {
                 if let Some(SingleJudgeResult { verdict, memory_used, time_used }) = case {
                     p { "#{idx} {verdict} {time_used} ms {memory_used} mb" }
                 } else {
@@ -72,7 +67,8 @@ mod inner {
 
     #[component]
     pub fn record_page(rid: Rid) -> Element {
-        let record = use_resource(move || async move { get_record(rid).await });
+        let record =
+            use_resource(move || async move { send_message(FrontMessage::GetRecord(rid)).await });
         if let Some(record) = &*record.read() {
             let record = record.as_ref().unwrap();
             let Record {

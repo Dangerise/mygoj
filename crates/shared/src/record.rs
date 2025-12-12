@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy, Hash)]
 pub struct Rid(pub u64);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

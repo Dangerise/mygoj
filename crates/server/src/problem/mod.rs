@@ -35,22 +35,18 @@ pub async fn read_problem(pid: &Pid) -> eyre::Result<Problem> {
     Ok(problem)
 }
 
-#[handler]
-pub async fn problem_front(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
-    let pid = Pid(req.query("pid").unwrap());
-
-    let problem = read_problem(&pid).await?;
+pub async fn get_problem_front(pid: &Pid) -> eyre::Result<ProblemFront> {
+    let problem = read_problem(pid).await?;
 
     let front = ProblemFront {
         title: problem.title,
         statement: problem.statement,
         time_limit: problem.time_limit,
         memory_limit: problem.memory_limit,
-        pid,
+        pid: pid.clone(),
     };
 
-    resp.render(Json(front));
-    Ok(())
+    Ok(front)
 }
 
 pub async fn problem_read_lock(pid: &Pid) {
@@ -61,6 +57,7 @@ pub async fn problem_read_lock(pid: &Pid) {
         .await
 }
 
+#[allow(dead_code)]
 pub async fn probllm_write_lock(pid: &Pid) {
     PROBLEM_LOCKS
         .entry(pid.clone())
@@ -69,6 +66,7 @@ pub async fn probllm_write_lock(pid: &Pid) {
         .await
 }
 
+#[allow(dead_code)]
 pub fn probllm_write_unlock(pid: &Pid) {
     PROBLEM_LOCKS.get(pid).unwrap().write_unlock()
 }
