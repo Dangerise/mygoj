@@ -16,6 +16,6 @@ tempfile.workspace = true
 testbox = { path = "../testbox" }
 tokio = { workspace = true, features = ["full"] }
 uuid.workspace = true
-tracing.workspace=true
-tracing-subscriber.workspace=true
-static_init.workspace=true
+tracing.workspace = true
+tracing-subscriber.workspace = true
+static_init.workspace = true

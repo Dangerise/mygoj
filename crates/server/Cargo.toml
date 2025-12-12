@@ -17,4 +17,4 @@ tokio = { workspace = true, features = ["full"] }
 tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid.workspace = true
-static_init.workspace=true
+static_init.workspace = true
