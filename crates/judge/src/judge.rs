@@ -98,7 +98,7 @@ async fn run_testcase(
 
     let mut ret = SingleJudgeResult {
         memory_used: (run_result.memory_used >> 20) as u32,
-        time_used: (run_result.time_used.as_millis() >> 20) as u32,
+        time_used: run_result.time_used.as_millis() as u32,
         verdict: Verdict::Ac,
     };
     match run_result.status {
@@ -186,7 +186,7 @@ pub async fn judge(rid: Rid) -> eyre::Result<()> {
         rid: rid2,
         pid,
         code,
-        status: _,
+        ..
     } = record;
 
     assert_eq!(rid, rid2);

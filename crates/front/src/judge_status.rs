@@ -1,15 +1,15 @@
 use super::*;
-use shared::judge::JudgeSignal;
+use shared::judge::JudgeMachineSignal;
 
-async fn get_judge_signals() -> eyre::Result<Vec<JudgeSignal>> {
+async fn get_judge_signals() -> eyre::Result<Vec<JudgeMachineSignal>> {
     let url = format!("{}/api/judge_machines", *SERVER_ORIGIN);
-    let signals: Vec<JudgeSignal> = reqwest::get(url).await?.json().await?;
+    let signals: Vec<JudgeMachineSignal> = reqwest::get(url).await?.json().await?;
     Ok(signals)
 }
 
 #[component]
-fn display_single(sig: JudgeSignal) -> Element {
-    let JudgeSignal {
+fn display_single(sig: JudgeMachineSignal) -> Element {
+    let JudgeMachineSignal {
         cpu_usage,
         cpu_name,
         tasks,
@@ -28,12 +28,12 @@ fn display_single(sig: JudgeSignal) -> Element {
         p { "{hostname}" }
         p { "CPU usage {cpu_usage}%" }
         p { "tasks {len}" }
-        hr {  }
+        hr {}
     }
 }
 
 #[component]
-fn display_signals(judge_signals: Vec<JudgeSignal>) -> Element {
+fn display_signals(judge_signals: Vec<JudgeMachineSignal>) -> Element {
     if judge_signals.is_empty() {
         rsx! {
             p { "no judge machine connected yet" }

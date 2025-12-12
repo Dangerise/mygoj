@@ -4197,6 +4197,7 @@ dependencies = [
  "dashmap",
  "dirs",
  "eyre",
+ "rand 0.9.2",
  "rust-embed",
  "salvo",
  "serde",

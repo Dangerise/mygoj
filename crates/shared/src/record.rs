@@ -8,8 +8,17 @@ pub enum RecordStatus {
     Waiting,
     Compiling,
     CompileError(CompileError),
-    Running,
+    Running(Vec<Option<SingleJudgeResult>>),
     Completed(AllJudgeResult),
+}
+
+impl RecordStatus {
+    pub fn done(&self) -> bool {
+        matches!(
+            self,
+            RecordStatus::CompileError(_) | RecordStatus::Completed(_)
+        )
+    }
 }
 
 impl std::fmt::Display for RecordStatus {
@@ -24,7 +33,7 @@ impl std::fmt::Display for RecordStatus {
             Self::CompileError(_) => {
                 write!(f, "Compile Error")
             }
-            Self::Running => {
+            Self::Running(_) => {
                 write!(f, "Running")
             }
             Self::Completed(res) => res.verdict.fmt(f),
@@ -38,6 +47,7 @@ pub struct Record {
     pub pid: Pid,
     pub code: String,
     pub status: RecordStatus,
+    pub timestamp: u64,
 }
 
 impl std::fmt::Display for Rid {

@@ -1,4 +1,5 @@
 use super::judge::JUDGE_QUEUE;
+use super::problem::problem_read_lock;
 use super::record::RECORDS;
 use salvo::prelude::*;
 use shared::record::{Record, RecordStatus, Rid};
@@ -15,16 +16,18 @@ pub async fn receive_submission(req: &mut Request, resp: &mut Response) -> eyre:
         rid = Rid(records.len() as u64);
         records.push(Record {
             rid,
-            pid: submission.pid,
+            pid: submission.pid.clone(),
             code: submission.code,
             status: RecordStatus::Waiting,
+            timestamp: chrono::Utc::now().timestamp() as u64,
         });
     }
 
-    {
+    tokio::spawn(async move {
+        problem_read_lock(&submission.pid).await;
         let mut queue = JUDGE_QUEUE.lock().await;
         queue.push_back(rid);
-    }
+    });
 
     resp.render(Json(&rid));
     Ok(())

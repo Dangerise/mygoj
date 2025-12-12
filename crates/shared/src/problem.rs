@@ -1,7 +1,7 @@
 use super::*;
 use compact_str::CompactString;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, Eq, Hash)]
 pub struct Pid(pub CompactString);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]

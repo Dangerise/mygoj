@@ -24,7 +24,7 @@ pub fn Submit(pid: Pid) -> Element {
     }
     rsx! {
         h1 { "submit to {pid}" }
-        Link { to: Route::Problem { pid:pid.clone() }, "back to problem" }
+        Link { to: Route::Problem { pid: pid.clone() }, "back to problem" }
         textarea {
             onchange: move |evt| {
                 code.set(evt.value());

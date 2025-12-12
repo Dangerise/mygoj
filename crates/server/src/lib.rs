@@ -33,7 +33,7 @@ async fn index(resp: &mut Response) {
 pub async fn main() -> eyre::Result<()> {
     tracing_subscriber::fmt().init();
 
-    tokio::spawn(judge::check_alive());
+    tokio::spawn(judge::track_judge_machines());
 
     let acceptor = TcpListener::new("0.0.0.0:5800").bind().await;
 

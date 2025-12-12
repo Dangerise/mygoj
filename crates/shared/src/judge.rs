@@ -3,11 +3,12 @@ use compact_str::CompactString;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
 pub enum JudgeMessage {
-    Signal(JudgeSignal),
+    Signal(JudgeMachineSignal),
     GetProblemData(Pid),
     GetRecord(Rid),
     GetProblemFile(Pid, CompactString),
     SendCompileResult(Rid, CompileResult),
+    SendSingleJudgeResult(Rid, usize, SingleJudgeResult),
     SendAllJudgeResults(Rid, AllJudgeResult),
 }
 
@@ -18,7 +19,7 @@ pub enum JudgeCommand {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
-pub struct JudgeSignal {
+pub struct JudgeMachineSignal {
     pub cpu_usage: u32,
     pub cpu_name: String,
     pub system_name: Option<String>,

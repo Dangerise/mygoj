@@ -11,9 +11,9 @@ use uuid::Uuid;
 pub static JUDGE_QUEUE: Mutex<VecDeque<Rid>> = Mutex::new(VecDeque::new());
 
 #[dynamic]
-static SIGNALS: Mutex<HashMap<Uuid, JudgeSignal>> = Mutex::new(HashMap::new());
+static SIGNALS: Mutex<HashMap<Uuid, JudgeMachineSignal>> = Mutex::new(HashMap::new());
 
-pub async fn check_alive() {
+pub async fn track_judge_machines() {
     let mut to_remove = Vec::new();
     loop {
         let now = chrono::Utc::now().timestamp_millis() as u64;
@@ -44,7 +44,7 @@ async fn generate_command() -> eyre::Result<JudgeCommand> {
 }
 
 use super::problem::{problem_data, send_problem_file};
-use super::record::{get_record, update_record};
+use super::record::{get_record, update_record, update_record_single};
 
 #[handler]
 pub async fn receive_message(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
@@ -54,7 +54,6 @@ pub async fn receive_message(req: &mut Request, resp: &mut Response) -> eyre::Re
             let command = receive_signal(sig).await?;
             resp.render(Json(command));
         }
-
         JudgeMessage::GetProblemData(pid) => {
             let problem_data = problem_data(pid).await?;
             resp.render(Json(problem_data));
@@ -66,9 +65,21 @@ pub async fn receive_message(req: &mut Request, resp: &mut Response) -> eyre::Re
             let record = get_record(rid).await?;
             resp.render(Json(record));
         }
+        JudgeMessage::SendSingleJudgeResult(rid, idx, res) => {
+            update_record_single(rid, idx, res).await?;
+            resp.render(Json(()));
+        }
         JudgeMessage::SendCompileResult(rid, res) => {
             let status = match res {
-                CompileResult::Compiled => RecordStatus::Running,
+                CompileResult::Compiled => {
+                    RecordStatus::Running(vec![
+                        const { None };
+                        problem_data(get_record(rid).await?.pid)
+                            .await?
+                            .testcases
+                            .len()
+                    ])
+                }
                 CompileResult::Error(ce) => RecordStatus::CompileError(ce),
             };
             update_record(rid, status).await?;
@@ -82,7 +93,7 @@ pub async fn receive_message(req: &mut Request, resp: &mut Response) -> eyre::Re
     Ok(())
 }
 
-pub async fn receive_signal(signal: JudgeSignal) -> eyre::Result<JudgeCommand> {
+pub async fn receive_signal(signal: JudgeMachineSignal) -> eyre::Result<JudgeCommand> {
     let uuid = signal.uuid;
     let mut signals = SIGNALS.lock().await;
     tracing::info!("received signal {:?}", &signal);

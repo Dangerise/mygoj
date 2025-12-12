@@ -1,4 +1,6 @@
 use salvo::prelude::*;
+use shared::judge::SingleJudgeResult;
+use super::problem::problem_read_unlock;
 use shared::record::*;
 use static_init::dynamic;
 use tokio::sync::RwLock;
@@ -14,8 +16,26 @@ pub async fn get_record(rid: Rid) -> eyre::Result<Record> {
     Ok(record.clone())
 }
 
+pub async fn update_record_single(
+    rid: Rid,
+    idx: usize,
+    res: SingleJudgeResult,
+) -> eyre::Result<()> {
+    let mut records = RECORDS.write().await;
+    let record = records.get_mut(rid.0 as usize).unwrap();
+    if let RecordStatus::Running(status) = &mut record.status {
+        let single = status.get_mut(idx).unwrap();
+        assert!(single.is_none());
+        *single = Some(res);
+    }
+    Ok(())
+}
+
 pub async fn update_record(rid: Rid, status: RecordStatus) -> eyre::Result<()> {
     tracing::info!("update rid {} {:#?}", rid, &status);
+    if matches!(status,RecordStatus::Completed(_)|RecordStatus::CompileError(_)){
+        problem_read_unlock(&get_record(rid).await?.pid);
+    }
     let mut records = RECORDS.write().await;
     let record = records.get_mut(rid.0 as usize).unwrap();
     record.status = status;
