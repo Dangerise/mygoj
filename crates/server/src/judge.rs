@@ -1,4 +1,3 @@
-use salvo::prelude::*;
 use shared::judge::*;
 use shared::record::*;
 use static_init::dynamic;
@@ -43,31 +42,38 @@ async fn generate_command() -> eyre::Result<JudgeCommand> {
     }
 }
 
+use super::EyreResult;
 use super::problem::{problem_data, send_problem_file};
 use super::record::{get_record, update_record, update_record_single};
+use axum::Json;
+use axum::body::Body;
+use axum::response::Response;
 
-#[handler]
-pub async fn receive_message(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
-    let msg: JudgeMessage = req.parse_json().await?;
+pub async fn receive_message(Json(msg): Json<JudgeMessage>) -> EyreResult<Response> {
+    fn to_json<T: serde::Serialize>(val: T) -> EyreResult<Response> {
+        Ok(Response::new(Body::new(serde_json::to_string_pretty(
+            &val,
+        )?)))
+    }
     match msg {
         JudgeMessage::Signal(sig) => {
             let command = receive_signal(sig).await?;
-            resp.render(Json(command));
+            to_json(command)
         }
         JudgeMessage::GetProblemData(pid) => {
             let problem_data = problem_data(pid).await?;
-            resp.render(Json(problem_data));
+            to_json(problem_data)
         }
         JudgeMessage::GetProblemFile(pid, filename) => {
-            send_problem_file(pid, &filename, resp).await?
+            send_problem_file(pid, &filename).await
         }
         JudgeMessage::GetRecord(rid) => {
             let record = get_record(rid).await?;
-            resp.render(Json(record));
+            to_json(record)
         }
         JudgeMessage::SendSingleJudgeResult(rid, idx, res) => {
             update_record_single(rid, idx, res).await?;
-            resp.render(Json(()));
+            to_json(())
         }
         JudgeMessage::SendCompileResult(rid, res) => {
             let status = match res {
@@ -83,14 +89,13 @@ pub async fn receive_message(req: &mut Request, resp: &mut Response) -> eyre::Re
                 CompileResult::Error(ce) => RecordStatus::CompileError(ce),
             };
             update_record(rid, status).await?;
-            resp.render(Json(()));
+            to_json(())
         }
         JudgeMessage::SendAllJudgeResults(rid, res) => {
             update_record(rid, RecordStatus::Completed(res)).await?;
-            resp.render(Json(()));
+            to_json(())
         }
     }
-    Ok(())
 }
 
 pub async fn receive_signal(signal: JudgeMachineSignal) -> eyre::Result<JudgeCommand> {

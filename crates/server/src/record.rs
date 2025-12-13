@@ -1,4 +1,3 @@
-use salvo::prelude::*;
 use shared::judge::SingleJudgeResult;
 use super::problem::problem_read_unlock;
 use shared::record::*;
@@ -39,13 +38,5 @@ pub async fn update_record(rid: Rid, status: RecordStatus) -> eyre::Result<()> {
     let mut records = RECORDS.write().await;
     let record = records.get_mut(rid.0 as usize).unwrap();
     record.status = status;
-    Ok(())
-}
-
-#[handler]
-pub async fn get_record_handler(req: &mut Request, resp: &mut Response) -> eyre::Result<()> {
-    let rid: Rid = Rid(req.query("rid").unwrap());
-    let record = get_record(rid).await?;
-    resp.render(Json(record));
     Ok(())
 }

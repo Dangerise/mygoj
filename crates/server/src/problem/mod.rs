@@ -1,14 +1,14 @@
 mod problem_lock;
 
+use super::EyreResult;
 use dashmap::DashMap;
 use problem_lock::ProblemLock;
-use salvo::http::HeaderMap;
-use salvo::prelude::*;
 use serde::{Deserialize, Serialize};
 pub use shared::problem::*;
 use static_init::dynamic;
 use std::path::PathBuf;
 use tokio::fs;
+use tokio_util::io::ReaderStream;
 
 #[dynamic]
 static PROBLEM_LOCKS: DashMap<Pid, ProblemLock> = DashMap::new();
@@ -96,9 +96,13 @@ fn problem_file_path(pid: &Pid, path: &str) -> PathBuf {
         .join(path)
 }
 
-pub async fn send_problem_file(pid: Pid, filename: &str, resp: &mut Response) -> eyre::Result<()> {
-    let empty_header_map = HeaderMap::new();
-    resp.send_file(problem_file_path(&pid, filename), &empty_header_map)
-        .await;
-    Ok(())
+use axum::body::Body;
+use axum::response::Response;
+
+pub async fn send_problem_file(pid: Pid, filename: &str) -> EyreResult<Response> {
+    let path = problem_file_path(&pid, filename);
+    let file = fs::File::open(path).await?;
+    let stream = ReaderStream::with_capacity(file, 1 << 20);
+    let resp = Response::new(Body::from_stream(stream));
+    Ok(resp)
 }
