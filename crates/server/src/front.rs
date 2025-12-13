@@ -6,7 +6,6 @@ use super::submission::receive_submission;
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
 use std::borrow::Cow;
-use std::ffi::OsStr;
 use std::sync::LazyLock;
 
 use axum::Json;
