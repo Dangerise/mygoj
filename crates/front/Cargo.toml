@@ -13,5 +13,6 @@ serde.workspace = true
 shared = { path = "../shared" }
 uuid = { workspace = true, features = ["js"] }
 web-sys = { version = "0.3.83", features = ["Window"] }
+getrandom = { workspace = true, features = ["wasm_js"] }
 
 [features]

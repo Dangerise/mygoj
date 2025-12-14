@@ -4,12 +4,17 @@ use serde::de::DeserializeOwned;
 use shared::front::FrontMessage;
 use shared::problem::Pid;
 use shared::record::Rid;
-use std::sync::LazyLock;
+use shared::user::LoginedUser;
+use std::sync::{LazyLock, RwLock};
 
 mod judge_status;
+mod login;
 mod problem;
 mod record;
+mod register;
 mod submit;
+
+static LOGIN_STATE: RwLock<Option<LoginedUser>> = RwLock::new(None);
 
 static SERVER_ORIGIN: LazyLock<String> = LazyLock::new(|| {
     // #[cfg(not(debug_assertions))]
@@ -22,17 +27,23 @@ static SERVER_ORIGIN: LazyLock<String> = LazyLock::new(|| {
     // }
 });
 
+async fn sleep(ms: u32) {
+    let js = include_str!("sleep.js");
+    let js = String::from(js).replace("TIME", &format!("{ms}"));
+    dioxus::document::eval(&js).await.unwrap();
+}
+
 async fn send_message<T>(msg: FrontMessage) -> eyre::Result<T>
 where
     T: DeserializeOwned,
 {
-    let res = reqwest::Client::new()
+    let mut req = reqwest::Client::new()
         .post(format!("{}/api/front", *SERVER_ORIGIN))
-        .json(&msg)
-        .send()
-        .await?
-        .json()
-        .await?;
+        .json(&msg);
+    if let Some(login_state) = &*LOGIN_STATE.read().unwrap() {
+        req = req.header(shared::headers::LOGIN_STATE, login_state.token.encode());
+    }
+    let res = req.send().await?.json().await?;
     Ok(res)
 }
 
@@ -49,18 +60,41 @@ enum Route {
     Record { rid: Rid },
     #[route("/judge-status")]
     JudgeStatus {},
+    #[route("/login")]
+    Login {},
+    #[route("/register")]
+    UserRegister {},
 }
 
 use judge_status::JudgeStatus;
+use login::Login;
 use problem::Problem;
 use record::Record;
+use register::UserRegister;
 use submit::Submit;
 
 #[component]
-// #[allow(non_snake_case)]
 fn Home() -> Element {
+    let login_state = LOGIN_STATE.read().unwrap().clone();
+
+    let welcome = || {
+        if let Some(login_state) = login_state {
+            let nickname = login_state.nickname;
+            rsx! {
+                "Welcome ! {nickname}"
+            }
+        } else {
+            rsx! {
+                "Welcome ! but please login first !"
+            }
+        }
+    };
+
     rsx! {
-        h1 { "It's Mygoj !!! " }
+        h1 { "Hello, It's Mygoj !!! " }
+        {
+            welcome()
+        }
     }
 }
 
@@ -83,7 +117,6 @@ fn main() {
     dioxus::logger::init(Level::INFO).expect("logger init");
     std::panic::set_hook(Box::new(|info| {
         error!("Panic Occured\n{}", info);
-        let _ = web_sys::window().unwrap().alert_with_message("panic");
     }));
 
     launch(app);

@@ -199,8 +199,10 @@ dependencies = [
  "axum",
  "axum-core",
  "bytes",
+ "cookie",
  "futures-core",
  "futures-util",
+ "headers",
  "http",
  "http-body",
  "http-body-util",
@@ -1308,6 +1310,7 @@ version = "0.1.0"
 dependencies = [
  "dioxus",
  "eyre",
+ "getrandom 0.3.4",
  "reqwest",
  "serde",
  "shared",
@@ -1562,6 +1565,12 @@ checksum = "54b4a22553d4242c49fddb9ba998a99962b5cc6f22cb5a3482bec22522403ce4"
 dependencies = [
  "http",
 ]
+
+[[package]]
+name = "hex"
+version = "0.4.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7f24254aa9a54b5c858eaee2f5bccdb46aaf0e486a595ed5fd8f86ba55232a70"
 
 [[package]]
 name = "http"
@@ -2970,15 +2979,18 @@ dependencies = [
  "axum",
  "axum-extra",
  "chrono",
+ "compact_str",
  "dashmap",
  "dirs",
  "eyre",
+ "hex",
  "rand",
  "rust-embed",
  "serde",
  "serde_json",
  "shared",
  "static_init",
+ "thiserror 2.0.17",
  "tokio",
  "tokio-util",
  "tower",
@@ -3024,6 +3036,8 @@ version = "0.1.0"
 dependencies = [
  "chrono",
  "compact_str",
+ "hex",
+ "rand",
  "serde",
  "thiserror 2.0.17",
  "tracing",

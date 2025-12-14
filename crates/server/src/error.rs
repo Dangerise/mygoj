@@ -24,3 +24,22 @@ where
         Self(value.into())
     }
 }
+
+#[derive(Debug,thiserror::Error)]
+pub enum Error {
+    #[error("user not found")]
+    UserNotFound,
+    #[error("wrong password")]
+    PasswordWrong,
+    #[error("Fuck you")]
+    Fuck,
+}
+
+impl Error {
+    fn status_code(&self) -> StatusCode {
+        use Error::*;
+        match self {
+            UserNotFound | PasswordWrong | Fuck => StatusCode::BAD_REQUEST,
+        }
+    }
+}

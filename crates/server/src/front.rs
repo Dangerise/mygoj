@@ -1,16 +1,19 @@
+use super::Error;
 use super::EyreResult;
 use super::judge::judge_machines;
 use super::problem::get_problem_front;
 use super::record::get_record;
 use super::submission::receive_submission;
+use super::user::{get_user_login, register_user, user_login};
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
+use shared::token::Token;
 use std::borrow::Cow;
 use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::Path;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, Response};
 
 #[cfg(debug_assertions)]
@@ -60,16 +63,23 @@ async fn dir(path: String) -> Result<Response, StatusCode> {
 }
 
 pub async fn assets(Path(path): Path<String>) -> Result<Response, StatusCode> {
-    tracing::info!("assets {path}");
+    // tracing::info!("assets {path}");
     dir(format!("assets/{path}")).await
 }
 
 pub async fn wasm(Path(path): Path<String>) -> Result<Response, StatusCode> {
-    tracing::info!("wasm {path}");
+    // tracing::info!("wasm {path}");
     dir(format!("wasm/{path}")).await
 }
 
-pub async fn receive_front_message(Json(message): Json<FrontMessage>) -> EyreResult<String> {
+pub async fn receive_front_message(
+    // headers: HeaderMap,
+    Json(message): Json<FrontMessage>,
+) -> EyreResult<String> {
+    // let login_state = match headers.get(shared::headers::LOGIN_STATE) {
+    //     Some(v) => get_user_login(Token::decode(v.as_bytes()).ok_or(Error::Fuck)?).await,
+    //     None => None,
+    // };
     match message {
         FrontMessage::GetProblemFront(pid) => {
             let front = get_problem_front(&pid).await?;
@@ -86,6 +96,14 @@ pub async fn receive_front_message(Json(message): Json<FrontMessage>) -> EyreRes
         FrontMessage::Submit(submission) => {
             let rid = receive_submission(submission).await?;
             Ok(serde_json::to_string_pretty(&rid)?)
+        }
+        FrontMessage::RegisterUser(registration) => {
+            let uid = register_user(registration).await?;
+            Ok(serde_json::to_string_pretty(&uid)?)
+        }
+        FrontMessage::LoginUser(email, pwd) => {
+            let ret = user_login(email, pwd).await?;
+            Ok(serde_json::to_string_pretty(&ret)?)
         }
     }
 }

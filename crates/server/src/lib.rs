@@ -1,10 +1,13 @@
+mod dbg;
 mod error;
 mod front;
 mod judge;
 mod problem;
 mod record;
 mod submission;
+mod user;
 
+use error::Error;
 use error::EyreResult;
 use tokio::net::TcpListener;
 
@@ -16,34 +19,26 @@ pub async fn main() -> eyre::Result<()> {
 
     tokio::spawn(judge::track_judge_machines());
 
-    let app = Router::new()
+    dbg::dbg().await;
+
+    let front = Router::new()
         .route("/", get(front::index))
-        .nest(
-            "/problem/{pid}",
-            Router::new().route("/", get(front::index)),
+        .route("/problem/{pid}", get(front::index))
+        .route("/record/{rid}", get(front::index))
+        .route("/submit/{pid}", get(front::index))
+        .route("/login", get(front::index))
+        .route("/register", get(front::index))
+        .route("/assets/{*path}", get(front::assets))
+        .route("/wasm/{*path}", get(front::wasm));
+
+    let api = Router::new()
+        .route(
+            "/judge",
+            get(judge::receive_message).post(judge::receive_message),
         )
-        .nest("/record/{rid}", Router::new().route("/", get(front::index)))
-        .nest("/submit/{pid}", Router::new().route("/", get(front::index)))
-        .nest(
-            "/assets",
-            Router::new().route("/{*path}", get(front::assets)),
-        )
-        .nest("/wasm", Router::new().route("/{*path}", get(front::wasm)))
-        .nest(
-            "/api",
-            Router::new()
-                .nest(
-                    "/judge",
-                    Router::new().route(
-                        "/",
-                        get(judge::receive_message).post(judge::receive_message),
-                    ),
-                )
-                .nest(
-                    "/front",
-                    Router::new().route("/", post(front::receive_front_message)),
-                ),
-        );
+        .route("/front", post(front::receive_front_message));
+
+    let app = front.nest("/api", api);
 
     println!("{:#?}", &app);
 
