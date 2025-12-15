@@ -22,14 +22,9 @@ pub async fn main() -> eyre::Result<()> {
     dbg::dbg().await;
 
     let front = Router::new()
-        .route("/", get(front::index))
-        .route("/problem/{pid}", get(front::index))
-        .route("/record/{rid}", get(front::index))
-        .route("/submit/{pid}", get(front::index))
-        .route("/login", get(front::index))
-        .route("/register", get(front::index))
         .route("/assets/{*path}", get(front::assets))
-        .route("/wasm/{*path}", get(front::wasm));
+        .route("/wasm/{*path}", get(front::wasm))
+        .fallback(front::index);
 
     let api = Router::new()
         .route(
