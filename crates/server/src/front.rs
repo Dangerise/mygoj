@@ -92,8 +92,22 @@ pub async fn receive_front_message(
             serde_json::to_string_pretty(&val).map_err(ServerError::into_internal)?,
         )))
     }
-    if let FrontMessage::LoginUser(email, pwd) = message {
-        return login_user(email, pwd).await;
+    match message {
+        FrontMessage::LoginUser(email, pwd) => {
+            return login_user(email, pwd).await;
+        }
+        FrontMessage::Logout => {
+            return Ok((
+                CookieJar::new().add(
+                    Cookie::build(shared::cookies::LOGIN_STATE)
+                        .removal()
+                        .build(),
+                ),
+                Json(()),
+            )
+                .into_response());
+        }
+        _ => {}
     }
     let logined_user = match jar.get(shared::cookies::LOGIN_STATE) {
         Some(v) => {
@@ -125,6 +139,6 @@ pub async fn receive_front_message(
             to_json(&uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
-        FrontMessage::LoginUser(_, _) => unreachable!(),
+        FrontMessage::LoginUser(_, _) | FrontMessage::Logout => unreachable!(),
     }
 }

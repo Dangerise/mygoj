@@ -10,4 +10,5 @@ pub enum FrontMessage {
     GetLoginedUser,
     RegisterUser(UserRegistration),
     CheckJudgeMachines,
+    Logout,
 }

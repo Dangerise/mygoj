@@ -12,6 +12,8 @@ use std::sync::{LazyLock, RwLock};
 mod judge_status;
 mod login;
 mod login_outdated;
+mod logout;
+mod notfound;
 mod problem;
 mod record;
 mod register;
@@ -71,11 +73,17 @@ enum Route {
     UserRegister {},
     #[route("/login_outdated")]
     LoginOutDated {},
+    #[route("/notfound")]
+    NotFound {},
+    #[route("/logout")]
+    Logout {},
 }
 
 use judge_status::JudgeStatus;
 use login::Login;
 use login_outdated::LoginOutDated;
+use logout::Logout;
+use notfound::NotFound;
 use problem::Problem;
 use record::Record;
 use register::UserRegister;
@@ -114,7 +122,19 @@ fn Navbar() -> Element {
     }
 }
 
-fn handle_server_error(err: ServerError) {}
+fn handle_server_error(err: ServerError) {
+    tracing::error!("{err:#?}");
+    match err {
+        ServerError::LoginOutDated => {
+            login_outdated::login_outdated();
+        }
+        ServerError::NotFound => {
+            let url = web_sys::window().unwrap().location().as_string().unwrap();
+            notfound::notfound(url);
+        }
+        _ => {}
+    }
+}
 
 #[component]
 fn app() -> Element {

@@ -3,6 +3,9 @@ use shared::submission::*;
 
 #[component]
 pub fn Submit(pid: Pid) -> Element {
+    if LOGIN_STATE.read().unwrap().is_none() {
+        navigator().push(Route::Login {});
+    }
     let mut code = use_signal(String::new);
     let rid: Signal<Option<Rid>> = use_signal(|| None);
     if let Some(rid) = *rid.read() {
@@ -22,6 +25,7 @@ pub fn Submit(pid: Pid) -> Element {
                 let submission = Submission {
                     code: code.cloned(),
                     pid: pid.clone(),
+                    uid:LOGIN_STATE.read().unwrap().as_ref().unwrap().uid,
                 };
                 let mut rid = rid;
                 spawn(async move {
