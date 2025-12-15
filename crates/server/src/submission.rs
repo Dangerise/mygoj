@@ -1,10 +1,11 @@
+use super::ServerError;
 use super::judge::JUDGE_QUEUE;
 use super::problem::problem_read_lock;
 use super::record::RECORDS;
 use shared::record::{Record, RecordStatus, Rid};
 use shared::submission::Submission;
 
-pub async fn receive_submission(submission: Submission) -> eyre::Result<Rid> {
+pub async fn receive_submission(submission: Submission) -> Result<Rid, ServerError> {
     let rid;
     {
         let mut records = RECORDS.write().await;

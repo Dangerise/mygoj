@@ -1,5 +1,6 @@
-use shared::judge::SingleJudgeResult;
+use super::ServerError;
 use super::problem::problem_read_unlock;
+use shared::judge::SingleJudgeResult;
 use shared::record::*;
 use static_init::dynamic;
 use tokio::sync::RwLock;
@@ -7,7 +8,7 @@ use tokio::sync::RwLock;
 #[dynamic]
 pub static RECORDS: RwLock<Vec<Record>> = RwLock::new(Vec::new());
 
-pub async fn get_record(rid: Rid) -> eyre::Result<Record> {
+pub async fn get_record(rid: Rid) -> Result<Record, ServerError> {
     tracing::info!("query rid {rid}");
     let records = RECORDS.read().await;
     let record = records.get(rid.0 as usize).unwrap();
@@ -19,7 +20,7 @@ pub async fn update_record_single(
     rid: Rid,
     idx: usize,
     res: SingleJudgeResult,
-) -> eyre::Result<()> {
+) -> Result<(), ServerError> {
     let mut records = RECORDS.write().await;
     let record = records.get_mut(rid.0 as usize).unwrap();
     if let RecordStatus::Running(status) = &mut record.status {
@@ -30,9 +31,12 @@ pub async fn update_record_single(
     Ok(())
 }
 
-pub async fn update_record(rid: Rid, status: RecordStatus) -> eyre::Result<()> {
+pub async fn update_record(rid: Rid, status: RecordStatus) -> Result<(), ServerError> {
     tracing::info!("update rid {} {:#?}", rid, &status);
-    if matches!(status,RecordStatus::Completed(_)|RecordStatus::CompileError(_)){
+    if matches!(
+        status,
+        RecordStatus::Completed(_) | RecordStatus::CompileError(_)
+    ) {
         problem_read_unlock(&get_record(rid).await?.pid);
     }
     let mut records = RECORDS.write().await;

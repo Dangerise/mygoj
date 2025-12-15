@@ -1,6 +1,6 @@
 mod problem_lock;
 
-use super::EyreResult;
+use super::ServerError;
 use dashmap::DashMap;
 use problem_lock::ProblemLock;
 use serde::{Deserialize, Serialize};
@@ -23,19 +23,24 @@ pub struct Problem {
     pub files: Vec<ProblemFile>,
 }
 
-pub async fn read_problem(pid: &Pid) -> eyre::Result<Problem> {
+pub async fn read_problem(pid: &Pid) -> Result<Problem, ServerError> {
     let path = dirs::home_dir()
         .unwrap()
         .join("mygoj")
         .join("problems")
         .join(&pid.0)
         .join("config.json");
-    let json = fs::read_to_string(&path).await?;
-    let problem: Problem = serde_json::from_str(&json)?;
+    if !path.exists() {
+        return Err(ServerError::NotFound);
+    }
+    let json = fs::read_to_string(&path)
+        .await
+        .map_err(ServerError::into_internal)?;
+    let problem: Problem = serde_json::from_str(&json).map_err(ServerError::into_internal)?;
     Ok(problem)
 }
 
-pub async fn get_problem_front(pid: &Pid) -> eyre::Result<ProblemFront> {
+pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
     let problem = read_problem(pid).await?;
 
     let front = ProblemFront {
@@ -75,7 +80,7 @@ pub fn problem_read_unlock(pid: &Pid) {
     PROBLEM_LOCKS.get(pid).unwrap().read_unlock()
 }
 
-pub async fn problem_data(pid: Pid) -> eyre::Result<ProblemData> {
+pub async fn problem_data(pid: Pid) -> Result<ProblemData, ServerError> {
     let problem = read_problem(&pid).await?;
     let data = ProblemData {
         pid,
@@ -99,9 +104,12 @@ fn problem_file_path(pid: &Pid, path: &str) -> PathBuf {
 use axum::body::Body;
 use axum::response::Response;
 
-pub async fn send_problem_file(pid: Pid, filename: &str) -> EyreResult<Response> {
+pub async fn send_problem_file(pid: Pid, filename: &str) -> Result<Response, ServerError> {
     let path = problem_file_path(&pid, filename);
-    let file = fs::File::open(path).await?;
+    if !path.exists() {
+        return Err(ServerError::NotFound);
+    }
+    let file = fs::File::open(path).await.map_err(ServerError::into_internal)?;
     let stream = ReaderStream::with_capacity(file, 1 << 20);
     let resp = Response::new(Body::from_stream(stream));
     Ok(resp)

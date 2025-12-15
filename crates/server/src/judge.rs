@@ -1,3 +1,4 @@
+use super::ServerError;
 use shared::judge::*;
 use shared::record::*;
 use static_init::dynamic;
@@ -32,7 +33,7 @@ pub async fn track_judge_machines() {
     }
 }
 
-async fn generate_command() -> eyre::Result<JudgeCommand> {
+async fn generate_command() -> Result<JudgeCommand, ServerError> {
     let mut queue = JUDGE_QUEUE.lock().await;
     if queue.is_empty() {
         Ok(JudgeCommand::Null)
@@ -42,18 +43,17 @@ async fn generate_command() -> eyre::Result<JudgeCommand> {
     }
 }
 
-use super::EyreResult;
 use super::problem::{problem_data, send_problem_file};
 use super::record::{get_record, update_record, update_record_single};
 use axum::Json;
 use axum::body::Body;
 use axum::response::Response;
 
-pub async fn receive_message(Json(msg): Json<JudgeMessage>) -> EyreResult<Response> {
-    fn to_json<T: serde::Serialize>(val: T) -> EyreResult<Response> {
-        Ok(Response::new(Body::new(serde_json::to_string_pretty(
-            &val,
-        )?)))
+pub async fn receive_message(Json(msg): Json<JudgeMessage>) -> Result<Response, ServerError> {
+    fn to_json<T: serde::Serialize>(val: T) -> Result<Response, ServerError> {
+        Ok(Response::new(Body::new(
+            serde_json::to_string_pretty(&val).map_err(ServerError::into_internal)?,
+        )))
     }
     match msg {
         JudgeMessage::Signal(sig) => {
@@ -64,9 +64,7 @@ pub async fn receive_message(Json(msg): Json<JudgeMessage>) -> EyreResult<Respon
             let problem_data = problem_data(pid).await?;
             to_json(problem_data)
         }
-        JudgeMessage::GetProblemFile(pid, filename) => {
-            send_problem_file(pid, &filename).await
-        }
+        JudgeMessage::GetProblemFile(pid, filename) => send_problem_file(pid, &filename).await,
         JudgeMessage::GetRecord(rid) => {
             let record = get_record(rid).await?;
             to_json(record)
@@ -98,7 +96,7 @@ pub async fn receive_message(Json(msg): Json<JudgeMessage>) -> EyreResult<Respon
     }
 }
 
-pub async fn receive_signal(signal: JudgeMachineSignal) -> eyre::Result<JudgeCommand> {
+pub async fn receive_signal(signal: JudgeMachineSignal) -> Result<JudgeCommand, ServerError> {
     let uuid = signal.uuid;
     let mut signals = SIGNALS.lock().await;
     tracing::info!("received signal {:?}", &signal);
@@ -113,7 +111,7 @@ pub async fn receive_signal(signal: JudgeMachineSignal) -> eyre::Result<JudgeCom
     Ok(command)
 }
 
-pub async fn judge_machines() -> eyre::Result<Vec<JudgeMachineSignal>> {
+pub async fn judge_machines() -> Result<Vec<JudgeMachineSignal>, ServerError> {
     let res = SIGNALS
         .lock()
         .await

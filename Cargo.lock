@@ -3034,11 +3034,15 @@ dependencies = [
 name = "shared"
 version = "0.1.0"
 dependencies = [
+ "axum",
+ "axum-extra",
  "chrono",
  "compact_str",
+ "eyre",
  "hex",
  "rand",
  "serde",
+ "serde_json",
  "thiserror 2.0.17",
  "tracing",
  "uuid",

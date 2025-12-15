@@ -1,6 +1,8 @@
 use dioxus::logger::tracing::{self, Level};
 use dioxus::prelude::*;
+use reqwest::StatusCode;
 use serde::de::DeserializeOwned;
+use shared::error::ServerError;
 use shared::front::FrontMessage;
 use shared::problem::Pid;
 use shared::record::Rid;
@@ -9,6 +11,7 @@ use std::sync::{LazyLock, RwLock};
 
 mod judge_status;
 mod login;
+mod login_outdated;
 mod problem;
 mod record;
 mod register;
@@ -37,13 +40,15 @@ async fn send_message<T>(msg: FrontMessage) -> eyre::Result<T>
 where
     T: DeserializeOwned,
 {
-    let mut req = reqwest::Client::new()
+    let req = reqwest::Client::new()
         .post(format!("{}/api/front", *SERVER_ORIGIN))
         .json(&msg);
-    if let Some(login_state) = &*LOGIN_STATE.read().unwrap() {
-        req = req.header(shared::headers::LOGIN_STATE, login_state.token.encode());
+    let resp = req.send().await?;
+    if resp.status() != StatusCode::OK {
+        let err: ServerError = resp.json().await?;
+        return Err(err.into());
     }
-    let res = req.send().await?.json().await?;
+    let res = resp.json().await?;
     Ok(res)
 }
 
@@ -58,16 +63,19 @@ enum Route {
     Submit { pid: Pid },
     #[route("/record/:rid")]
     Record { rid: Rid },
-    #[route("/judge-status")]
+    #[route("/judge_status")]
     JudgeStatus {},
     #[route("/login")]
     Login {},
     #[route("/register")]
     UserRegister {},
+    #[route("/login_outdated")]
+    LoginOutDated {},
 }
 
 use judge_status::JudgeStatus;
 use login::Login;
+use login_outdated::LoginOutDated;
 use problem::Problem;
 use record::Record;
 use register::UserRegister;
@@ -106,10 +114,34 @@ fn Navbar() -> Element {
     }
 }
 
+fn handle_server_error(err: ServerError) {}
+
 #[component]
 fn app() -> Element {
-    rsx! {
-        Router::<Route> {}
+    let mut start = use_signal(|| false);
+    use_future(move || async move {
+        let logined_user: Option<LoginedUser> =
+            match send_message(FrontMessage::GetLoginedUser).await {
+                Ok(ret) => ret,
+                Err(err) => {
+                    if let Some(err) = err.downcast_ref::<ServerError>() {
+                        handle_server_error(err.clone());
+                    } else {
+                        Err::<(), _>(err).unwrap();
+                    }
+                    None
+                }
+            };
+        *LOGIN_STATE.write().unwrap() = logined_user;
+        start.set(true);
+    });
+
+    if start.cloned() {
+        rsx! {
+            Router::<Route> {}
+        }
+    } else {
+        rsx!()
     }
 }
 

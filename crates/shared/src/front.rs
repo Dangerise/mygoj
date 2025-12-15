@@ -7,6 +7,7 @@ pub enum FrontMessage {
     GetRecord(Rid),
     Submit(Submission),
     LoginUser(CompactString, CompactString),
+    GetLoginedUser,
     RegisterUser(UserRegistration),
     CheckJudgeMachines,
 }

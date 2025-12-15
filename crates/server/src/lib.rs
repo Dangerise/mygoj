@@ -1,5 +1,4 @@
 mod dbg;
-mod error;
 mod front;
 mod judge;
 mod problem;
@@ -7,9 +6,8 @@ mod record;
 mod submission;
 mod user;
 
-use error::Error;
-use error::EyreResult;
 use tokio::net::TcpListener;
+use shared::error::ServerError;
 
 use axum::Router;
 use axum::routing::{get, post};

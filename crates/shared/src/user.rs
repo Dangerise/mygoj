@@ -16,5 +16,4 @@ pub struct LoginedUser {
     pub uid: Uid,
     pub email: CompactString,
     pub nickname: CompactString,
-    pub token: Token,
 }

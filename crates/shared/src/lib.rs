@@ -7,9 +7,10 @@ pub mod submission;
 pub mod front;
 pub mod user;
 pub mod token;
-pub mod headers;
+pub mod cookies;
+pub mod error;
 
-use token::*;
+// use token::*;
 use problem::*;
 use submission::*;
 use record::*;

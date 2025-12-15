@@ -15,7 +15,7 @@ rand.workspace = true
 rust-embed = { workspace = true, features = ["debug-embed"] }
 serde.workspace = true
 serde_json.workspace = true
-shared = { path = "../shared" }
+shared = { path = "../shared",features=["server"] }
 static_init.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-util.workspace = true

@@ -1,0 +1,63 @@
+use serde::{Deserialize, Serialize};
+
+#[derive(Debug, thiserror::Error, Serialize, Deserialize, Clone)]
+pub enum ServerError {
+    #[error("user not found")]
+    UserNotFound,
+    #[error("wrong password")]
+    PasswordWrong,
+    #[error("Fuck you")]
+    Fuck,
+    #[error("login out dated")]
+    LoginOutDated,
+    #[error("internal error {0:#?}")]
+    Internal(String),
+    #[error("not found ")]
+    NotFound,
+    #[error("the email has exist")]
+    RepeatedEmail,
+}
+
+#[cfg(feature = "server")]
+mod on_server {
+    use super::*;
+    use axum::body::Body;
+    use axum::http::StatusCode;
+    use axum::response::{IntoResponse, Response};
+    use axum_extra::extract::{CookieJar, cookie::Cookie};
+    impl IntoResponse for ServerError {
+        fn into_response(self) -> Response {
+            let json = serde_json::to_string_pretty(&self).unwrap();
+            let resp = Response::builder()
+                .status(self.status_code())
+                .body(Body::new(json))
+                .unwrap();
+            if matches!(self, ServerError::LoginOutDated) {
+                (
+                    CookieJar::new()
+                        .add(Cookie::build(crate::cookies::LOGIN_STATE).removal().build()),
+                    resp,
+                )
+                    .into_response()
+            } else {
+                resp
+            }
+        }
+    }
+
+    impl ServerError {
+        pub fn into_internal<E: Into<eyre::Report>>(err: E) -> Self {
+            let report: eyre::Report = err.into();
+            Self::Internal(format!("{:#?}", report))
+        }
+        pub fn status_code(&self) -> StatusCode {
+            use ServerError::*;
+            match self {
+                UserNotFound | PasswordWrong | Fuck | RepeatedEmail => StatusCode::BAD_REQUEST,
+                LoginOutDated => StatusCode::UNAUTHORIZED,
+                Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
+                NotFound => StatusCode::NOT_FOUND,
+            }
+        }
+    }
+}

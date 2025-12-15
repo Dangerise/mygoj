@@ -1,4 +1,4 @@
-use super::Error;
+use super::ServerError;
 use compact_str::CompactString;
 use dashmap::{DashMap, DashSet};
 use shared::token::Token;
@@ -31,12 +31,13 @@ pub async fn register_user(
         password,
         nickname,
     }: UserRegistration,
-) -> eyre::Result<Uid> {
-    eyre::ensure!(email.len() <= 50, "email too long");
-    eyre::ensure!(password.len() <= 50, "pwd too long");
+) -> Result<Uid, ServerError> {
+    if email.len() > 50 || password.len() > 50 {
+        return Err(ServerError::Fuck);
+    }
 
     if !EMAILS_SET.insert(email.clone()) {
-        return Err(eyre::eyre!("repeated email"));
+        return Err(ServerError::RepeatedEmail);
     }
 
     let mut last_uid = LAST_UID.write();
@@ -67,28 +68,32 @@ pub async fn register_user(
 #[dynamic]
 static LOGIN_STATES: DashMap<Token, Uid> = DashMap::new();
 
-pub async fn user_login(
-    email: CompactString,
-    password: CompactString,
-) -> Result<LoginedUser, Error> {
-    let uid = EMAILS.get(&email).ok_or(Error::UserNotFound)?;
+pub async fn user_login(email: CompactString, password: CompactString) -> Result<Token, ServerError> {
+    let uid = EMAILS.get(&email).ok_or(ServerError::UserNotFound)?;
     let user = USERS.get(&uid).unwrap();
     if user.password == password {
         let uid = *uid;
         let token = Token::new();
         let ret = LOGIN_STATES.insert(token, uid);
         assert!(ret.is_none());
-        Ok(LoginedUser {
-            uid,
-            email: user.email.clone(),
-            nickname: user.nickname.clone(),
-            token,
-        })
+        Ok(token)
     } else {
-        Err(Error::PasswordWrong)
+        Err(ServerError::PasswordWrong)
     }
 }
 
-pub async fn get_user_login(token: Token) -> Option<Uid> {
-    LOGIN_STATES.get(&token).map(|x| *x)
+pub async fn get_user_login(token: Token) -> Result<LoginedUser, ServerError> {
+    let uid = LOGIN_STATES
+        .get(&token)
+        .map(|x| *x)
+        .ok_or(ServerError::LoginOutDated)?;
+    let user = USERS
+        .get(&uid)
+        .map(|x| LoginedUser {
+            uid,
+            nickname: x.nickname.clone(),
+            email: x.email.clone(),
+        })
+        .unwrap();
+    Ok(user)
 }

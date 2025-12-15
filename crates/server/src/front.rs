@@ -1,10 +1,10 @@
-use super::Error;
-use super::EyreResult;
+use super::ServerError;
 use super::judge::judge_machines;
 use super::problem::get_problem_front;
 use super::record::get_record;
 use super::submission::receive_submission;
 use super::user::{get_user_login, register_user, user_login};
+use compact_str::CompactString;
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
 use shared::token::Token;
@@ -13,8 +13,10 @@ use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::Path;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, Response};
+use axum_extra::extract::CookieJar;
+use axum_extra::extract::cookie::Cookie;
 
 #[cfg(debug_assertions)]
 #[derive(RustEmbed)]
@@ -37,6 +39,7 @@ pub async fn index() -> Html<&'static str> {
     Html(file)
 }
 
+use axum::body::Body;
 use axum::http::header::CONTENT_TYPE;
 use axum::response::IntoResponse;
 use axum_extra::body::AsyncReadBody;
@@ -73,37 +76,55 @@ pub async fn wasm(Path(path): Path<String>) -> Result<Response, StatusCode> {
 }
 
 pub async fn receive_front_message(
-    // headers: HeaderMap,
+    jar: CookieJar,
     Json(message): Json<FrontMessage>,
-) -> EyreResult<String> {
-    // let login_state = match headers.get(shared::headers::LOGIN_STATE) {
-    //     Some(v) => get_user_login(Token::decode(v.as_bytes()).ok_or(Error::Fuck)?).await,
-    //     None => None,
-    // };
+) -> Result<Response, ServerError> {
+    async fn login_user(email: CompactString, pwd: CompactString) -> Result<Response, ServerError> {
+        let token = user_login(email, pwd).await?;
+        let logined_user = get_user_login(token).await?;
+        let cookie = Cookie::new(shared::cookies::LOGIN_STATE, token.encode());
+        let jar = CookieJar::new().add(cookie);
+        let resp = (jar, Json(logined_user)).into_response();
+        Ok(resp)
+    }
+    fn to_json<T: serde::Serialize>(val: T) -> Result<Response, ServerError> {
+        Ok(Response::new(Body::new(
+            serde_json::to_string_pretty(&val).map_err(ServerError::into_internal)?,
+        )))
+    }
+    if let FrontMessage::LoginUser(email, pwd) = message {
+        return login_user(email, pwd).await;
+    }
+    let logined_user = match jar.get(shared::cookies::LOGIN_STATE) {
+        Some(v) => {
+            let token = Token::decode(v.value().as_ref()).ok_or(ServerError::Fuck)?;
+            let ret = get_user_login(token).await?;
+            Some(ret)
+        }
+        None => None,
+    };
     match message {
         FrontMessage::GetProblemFront(pid) => {
             let front = get_problem_front(&pid).await?;
-            Ok(serde_json::to_string_pretty(&front)?)
+            to_json(&front)
         }
         FrontMessage::CheckJudgeMachines => {
             let res = judge_machines().await?;
-            Ok(serde_json::to_string_pretty(&res)?)
+            to_json(&res)
         }
         FrontMessage::GetRecord(rid) => {
             let rec = get_record(rid).await?;
-            Ok(serde_json::to_string_pretty(&rec)?)
+            to_json(&rec)
         }
         FrontMessage::Submit(submission) => {
             let rid = receive_submission(submission).await?;
-            Ok(serde_json::to_string_pretty(&rid)?)
+            to_json(&rid)
         }
         FrontMessage::RegisterUser(registration) => {
             let uid = register_user(registration).await?;
-            Ok(serde_json::to_string_pretty(&uid)?)
+            to_json(&uid)
         }
-        FrontMessage::LoginUser(email, pwd) => {
-            let ret = user_login(email, pwd).await?;
-            Ok(serde_json::to_string_pretty(&ret)?)
-        }
+        FrontMessage::GetLoginedUser => to_json(&logined_user),
+        FrontMessage::LoginUser(_, _) => unreachable!(),
     }
 }

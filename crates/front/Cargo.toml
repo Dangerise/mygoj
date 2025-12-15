@@ -8,7 +8,7 @@ edition = "2024"
 [dependencies]
 dioxus = { version = "0.7.2", features = ["router", "web"] }
 eyre.workspace = true
-reqwest = { workspace = true }
+reqwest = { workspace = true,features=["cookies"] }
 serde.workspace = true
 shared = { path = "../shared" }
 uuid = { workspace = true, features = ["js"] }
