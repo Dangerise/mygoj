@@ -1,6 +1,6 @@
 use super::*;
 
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy, Hash)]
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Copy, Hash, Eq)]
 pub struct Rid(pub u64);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -43,11 +43,21 @@ impl std::fmt::Display for RecordStatus {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Record {
+    pub uid: Uid,
     pub rid: Rid,
     pub pid: Pid,
     pub code: String,
     pub status: RecordStatus,
     pub timestamp: u64,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub enum RecordMessage {
+    Compiling,
+    Compiled(usize),
+    CompileError(CompileError),
+    NewSingleResult(usize, SingleJudgeResult),
+    Completed(AllJudgeResult),
 }
 
 impl std::fmt::Display for Rid {

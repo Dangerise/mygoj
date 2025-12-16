@@ -25,7 +25,6 @@ pub fn Submit(pid: Pid) -> Element {
                 let submission = Submission {
                     code: code.cloned(),
                     pid: pid.clone(),
-                    uid:LOGIN_STATE.read().unwrap().as_ref().unwrap().uid,
                 };
                 let mut rid = rid;
                 spawn(async move {

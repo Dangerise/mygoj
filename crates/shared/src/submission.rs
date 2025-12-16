@@ -4,5 +4,4 @@ use super::*;
 pub struct Submission {
     pub code: String,
     pub pid: Pid,
-    pub uid: Uid,
 }

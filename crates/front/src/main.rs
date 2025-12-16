@@ -32,6 +32,21 @@ static SERVER_ORIGIN: LazyLock<String> = LazyLock::new(|| {
     // }
 });
 
+fn ws_origin() -> String {
+    let origin = SERVER_ORIGIN.as_str();
+    assert!(origin.starts_with("http") || origin.starts_with("https"));
+    format!(
+        "ws{}",
+        if origin.starts_with("http") {
+            &origin["http".len()..]
+        } else if origin.starts_with("https") {
+            &origin["https".len()..]
+        } else {
+            unreachable!()
+        }
+    )
+}
+
 async fn sleep(ms: u32) {
     let js = include_str!("sleep.js");
     let js = String::from(js).replace("TIME", &format!("{ms}"));

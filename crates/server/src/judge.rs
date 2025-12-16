@@ -99,7 +99,7 @@ pub async fn receive_message(Json(msg): Json<JudgeMessage>) -> Result<Response, 
 pub async fn receive_signal(signal: JudgeMachineSignal) -> Result<JudgeCommand, ServerError> {
     let uuid = signal.uuid;
     let mut signals = SIGNALS.lock().await;
-    tracing::info!("received signal {:?}", &signal);
+    // tracing::info!("received signal {:?}", &signal);
     if let hash_map::Entry::Vacant(e) = signals.entry(uuid) {
         tracing::info!("new judge machine online {}", uuid);
         e.insert(signal);

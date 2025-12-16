@@ -3,14 +3,13 @@ mod front;
 mod judge;
 mod problem;
 mod record;
-mod submission;
 mod user;
 
-use tokio::net::TcpListener;
 use shared::error::ServerError;
+use tokio::net::TcpListener;
 
 use axum::Router;
-use axum::routing::{get, post};
+use axum::routing::{any, get, post};
 
 pub async fn main() -> eyre::Result<()> {
     tracing_subscriber::fmt().init();
@@ -27,15 +26,18 @@ pub async fn main() -> eyre::Result<()> {
     let api = Router::new()
         .route(
             "/judge",
-            get(judge::receive_message).post(judge::receive_message),
+            any(judge::receive_message),
         )
-        .route("/front", post(front::receive_front_message));
+        .route("/front", post(front::receive_front_message))
+        .route("/front/record_ws", any(record::ws));
 
     let app = front.nest("/api", api);
 
     println!("{:#?}", &app);
 
     let listener = TcpListener::bind("127.0.0.1:5800").await.unwrap();
+
+    tracing::info!("running");
 
     axum::serve(listener, app).await.unwrap();
 

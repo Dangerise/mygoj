@@ -8,11 +8,15 @@ edition = "2024"
 [dependencies]
 dioxus = { version = "0.7.2", features = ["router", "web"] }
 eyre.workspace = true
-reqwest = { workspace = true,features=["cookies"] }
+futures-util.workspace = true
+getrandom = { workspace = true, features = ["wasm_js"] }
+pharos = "0.5.3"
+reqwest = { workspace = true, features = ["cookies"] }
 serde.workspace = true
 shared = { path = "../shared" }
 uuid = { workspace = true, features = ["js"] }
 web-sys = { version = "0.3.83", features = ["Window"] }
-getrandom = { workspace = true, features = ["wasm_js"] }
+ws_stream_wasm = "0.7.5"
+serde_json.workspace = true
 
 [features]

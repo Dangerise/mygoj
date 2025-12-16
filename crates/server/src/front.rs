@@ -1,8 +1,7 @@
 use super::ServerError;
 use super::judge::judge_machines;
 use super::problem::get_problem_front;
-use super::record::get_record;
-use super::submission::receive_submission;
+use super::record::{get_record, submit};
 use super::user::{get_user_login, register_user, user_login};
 use compact_str::CompactString;
 use rust_embed::RustEmbed;
@@ -62,6 +61,7 @@ async fn dir(path: String) -> Result<Response, StatusCode> {
             }
         })
         .unwrap_or("");
+    tracing::info!("{} for {}", ty, path);
     Ok(([(CONTENT_TYPE, ty)], body).into_response())
 }
 
@@ -131,7 +131,8 @@ pub async fn receive_front_message(
             to_json(&rec)
         }
         FrontMessage::Submit(submission) => {
-            let rid = receive_submission(submission).await?;
+            let uid = logined_user.map(|x| x.uid).ok_or(ServerError::Fuck)?;
+            let rid = submit(uid, submission).await?;
             to_json(&rid)
         }
         FrontMessage::RegisterUser(registration) => {

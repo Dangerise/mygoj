@@ -1,18 +1,81 @@
 use super::ServerError;
-use super::problem::problem_read_unlock;
+use super::judge::JUDGE_QUEUE;
+use super::problem::{problem_read_lock, problem_read_unlock, read_problem};
+use dashmap::DashMap;
 use shared::judge::SingleJudgeResult;
 use shared::record::*;
+use shared::submission::Submission;
+use shared::user::Uid;
 use static_init::dynamic;
-use tokio::sync::RwLock;
+use std::sync::Mutex;
+use tokio::sync::broadcast;
+
+use axum::extract::{
+    Query, WebSocketUpgrade,
+    ws::{Message as WsMessage, WebSocket},
+};
+use axum::response::Response;
 
 #[dynamic]
-pub static RECORDS: RwLock<Vec<Record>> = RwLock::new(Vec::new());
+pub static RECORDS: DashMap<Rid, Record> = DashMap::new();
+#[dynamic]
+pub static LAST_RID: Mutex<Rid> = Mutex::new(Rid(0));
+
+struct RecordChannel {
+    tx: broadcast::Sender<RecordMessage>,
+    _rx: broadcast::Receiver<RecordMessage>,
+}
+
+impl RecordChannel {
+    fn new(size: usize) -> Self {
+        let (tx, rx) = broadcast::channel(size);
+        Self { tx, _rx: rx }
+    }
+}
+
+#[dynamic]
+static RECORD_CHANNEL: DashMap<Rid, RecordChannel> = DashMap::new();
+
+pub async fn submit(uid: Uid, submission: Submission) -> Result<Rid, ServerError> {
+    let Submission { code, pid } = submission;
+
+    if code.len() > (50 << 10) {
+        return Err(ServerError::Fuck);
+    }
+
+    let rid;
+    {
+        let mut last_rid = LAST_RID.lock().unwrap();
+        last_rid.0 += 1;
+        rid = last_rid.clone();
+    }
+
+    let now = chrono::Utc::now().timestamp() as u64;
+
+    problem_read_lock(&pid).await;
+    let case_count = read_problem(&pid).await?.testcases.len();
+
+    let record = Record {
+        uid,
+        rid,
+        pid: pid.clone(),
+        code,
+        status: RecordStatus::Waiting,
+        timestamp: now,
+    };
+
+    RECORDS.insert(rid, record);
+    RECORD_CHANNEL.insert(rid, RecordChannel::new(case_count * 2));
+    {
+        let mut queue = JUDGE_QUEUE.lock().await;
+        queue.push_back(rid);
+    }
+
+    Ok(rid)
+}
 
 pub async fn get_record(rid: Rid) -> Result<Record, ServerError> {
-    tracing::info!("query rid {rid}");
-    let records = RECORDS.read().await;
-    let record = records.get(rid.0 as usize).unwrap();
-    tracing::info!("record {:?}", record);
+    let record = RECORDS.get(&rid).ok_or(ServerError::NotFound)?;
     Ok(record.clone())
 }
 
@@ -21,26 +84,81 @@ pub async fn update_record_single(
     idx: usize,
     res: SingleJudgeResult,
 ) -> Result<(), ServerError> {
-    let mut records = RECORDS.write().await;
-    let record = records.get_mut(rid.0 as usize).unwrap();
-    if let RecordStatus::Running(status) = &mut record.status {
-        let single = status.get_mut(idx).unwrap();
-        assert!(single.is_none());
-        *single = Some(res);
-    }
+    let mut record = RECORDS.get_mut(&rid).unwrap();
+    let RecordStatus::Running(status) = &mut record.status else {
+        unreachable!()
+    };
+
+    let single = status.get_mut(idx).unwrap();
+    assert!(single.is_none());
+    *single = Some(res.clone());
+
+    drop(record);
+
+    let sender = &RECORD_CHANNEL.get(&rid).unwrap().tx;
+    sender
+        .send(RecordMessage::NewSingleResult(idx, res))
+        .unwrap();
+
     Ok(())
 }
 
 pub async fn update_record(rid: Rid, status: RecordStatus) -> Result<(), ServerError> {
     tracing::info!("update rid {} {:#?}", rid, &status);
-    if matches!(
-        status,
-        RecordStatus::Completed(_) | RecordStatus::CompileError(_)
-    ) {
+    if status.done() {
         problem_read_unlock(&get_record(rid).await?.pid);
     }
-    let mut records = RECORDS.write().await;
-    let record = records.get_mut(rid.0 as usize).unwrap();
-    record.status = status;
+    let mut record = RECORDS.get_mut(&rid).unwrap();
+    record.status = status.clone();
+    drop(record);
+
+    let sender = &RECORD_CHANNEL.get(&rid).unwrap().tx;
+    let msg = match status {
+        RecordStatus::Compiling => RecordMessage::Compiling,
+        RecordStatus::CompileError(ce) => RecordMessage::CompileError(ce),
+        RecordStatus::Running(v) => RecordMessage::Compiled(v.len()),
+        RecordStatus::Completed(all) => RecordMessage::Completed(all),
+        RecordStatus::Waiting => unreachable!(),
+    };
+    sender.send(msg).unwrap();
     Ok(())
+}
+
+#[derive(serde::Deserialize)]
+pub struct Qrid {
+    rid: u64,
+}
+
+pub async fn ws(
+    ws: WebSocketUpgrade,
+    Query(Qrid { rid }): Query<Qrid>,
+) -> Result<Response, ServerError> {
+    let rid = Rid(rid);
+    tracing::info!("establish connect for {rid}");
+    let record = get_record(rid).await?;
+    if record.status.done() {
+        return Err(ServerError::Fuck);
+    }
+    let resp = ws.on_upgrade(move |socket| handle_socket(socket, rid));
+    Ok(resp)
+}
+
+async fn handle_socket(mut socket: WebSocket, rid: Rid) {
+    let Some(mut receiver) = RECORD_CHANNEL.get(&rid).map(|x| x.tx.subscribe()) else {
+        return;
+    };
+    tracing::info!("handle connect for {rid}");
+    loop {
+        let Ok(msg) = receiver.recv().await else {
+            return;
+        };
+        let res = socket
+            .send(WsMessage::Text(
+                serde_json::to_string_pretty(&msg).unwrap().into(),
+            ))
+            .await;
+        if res.is_err() {
+            return;
+        }
+    }
 }
