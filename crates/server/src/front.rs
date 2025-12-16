@@ -61,7 +61,7 @@ async fn dir(path: String) -> Result<Response, StatusCode> {
             }
         })
         .unwrap_or("");
-    tracing::info!("{} for {}", ty, path);
+    // tracing::info!("{} for {}", ty, path);
     Ok(([(CONTENT_TYPE, ty)], body).into_response())
 }
 

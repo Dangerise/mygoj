@@ -159,8 +159,7 @@ fn app() -> Element {
             match send_message(FrontMessage::GetLoginedUser).await {
                 Ok(ret) => ret,
                 Err(err) => {
-                    if let Some(err) = err.downcast_ref::<ServerError>() {
-                        handle_server_error(err.clone());
+                    if let Some(ServerError::LoginOutDated) = err.downcast_ref::<ServerError>() {
                     } else {
                         Err::<(), _>(err).unwrap();
                     }
