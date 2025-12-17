@@ -137,7 +137,7 @@ fn Navbar() -> Element {
     }
 }
 
-fn handle_server_error(err: ServerError) {
+fn auto_error(err: ServerError) {
     tracing::error!("{err:#?}");
     match err {
         ServerError::LoginOutDated => {

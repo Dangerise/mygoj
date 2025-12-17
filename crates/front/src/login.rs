@@ -1,4 +1,16 @@
 use super::*;
+use std::sync::Mutex;
+
+static REDIRECT: Mutex<Option<Route>> = Mutex::new(None);
+
+fn login_required(redirect: Route) -> Element {
+    rsx! {
+        p {
+            "you need to login to access the page"
+        }
+        Login {  }
+    }
+}
 
 #[component]
 pub fn Login() -> Element {
@@ -15,7 +27,12 @@ pub fn Login() -> Element {
             .unwrap();
             *LOGIN_STATE.write().unwrap() = Some(login_user);
             let nav = navigator();
-            nav.push(Route::Home {});
+            let redirect = REDIRECT.lock().unwrap();
+            if let Some(redirect) = &*redirect {
+                nav.push(redirect.clone());
+            } else {
+                nav.push(Route::Home {});
+            }
         });
     };
 
