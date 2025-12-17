@@ -1,7 +1,7 @@
 use super::*;
 
 pub fn login_outdated() {
-    *LOGIN_STATE.write().unwrap() = None;
+    logout::clear_cache();
     navigator().push(Route::LoginOutDated {});
 }
 

@@ -12,6 +12,17 @@ fn login_required(redirect: Route) -> Element {
     }
 }
 
+async fn login(email: String, password: String) {
+    let (token, login_user): (String, LoginedUser) =
+        send_message(FrontMessage::LoginUser(email.into(), password.into()))
+            .await
+            .unwrap();
+    storage()
+        .set(shared::constant::LOGIN_TOKEN, &token)
+        .unwrap();
+    *LOGIN_STATE.write().unwrap() = Some(login_user);
+}
+
 #[component]
 pub fn Login() -> Element {
     let mut email = use_signal(|| String::new());
@@ -19,13 +30,7 @@ pub fn Login() -> Element {
 
     let login = move |_| {
         spawn(async move {
-            let login_user: LoginedUser = send_message(FrontMessage::LoginUser(
-                email.cloned().into(),
-                password.cloned().into(),
-            ))
-            .await
-            .unwrap();
-            *LOGIN_STATE.write().unwrap() = Some(login_user);
+            login(email.cloned(), password.cloned()).await;
             let nav = navigator();
             let redirect = REDIRECT.lock().unwrap();
             if let Some(redirect) = &*redirect {

@@ -1,1 +1,0 @@
-pub const LOGIN_STATE: &str = "login_state";

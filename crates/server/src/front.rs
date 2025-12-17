@@ -2,7 +2,7 @@ use super::ServerError;
 use super::judge::judge_machines;
 use super::problem::get_problem_front;
 use super::record::{get_record, submit};
-use super::user::{get_user_login, register_user, user_login};
+use super::user::{get_user_login, register_user, remove_token, user_login};
 use compact_str::CompactString;
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
@@ -12,10 +12,8 @@ use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::Path;
-use axum::http::StatusCode;
+use axum::http::{HeaderMap, StatusCode};
 use axum::response::{Html, Response};
-use axum_extra::extract::CookieJar;
-use axum_extra::extract::cookie::Cookie;
 
 #[cfg(debug_assertions)]
 #[derive(RustEmbed)]
@@ -76,15 +74,13 @@ pub async fn wasm(Path(path): Path<String>) -> Result<Response, StatusCode> {
 }
 
 pub async fn receive_front_message(
-    jar: CookieJar,
+    headers: HeaderMap,
     Json(message): Json<FrontMessage>,
 ) -> Result<Response, ServerError> {
     async fn login_user(email: CompactString, pwd: CompactString) -> Result<Response, ServerError> {
         let token = user_login(email, pwd).await?;
         let logined_user = get_user_login(token).await?;
-        let cookie = Cookie::new(shared::cookies::LOGIN_STATE, token.encode());
-        let jar = CookieJar::new().add(cookie);
-        let resp = (jar, Json(logined_user)).into_response();
+        let resp = Json((token.encode(), logined_user)).into_response();
         Ok(resp)
     }
     fn to_json<T: serde::Serialize>(val: T) -> Result<Response, ServerError> {
@@ -92,26 +88,24 @@ pub async fn receive_front_message(
             serde_json::to_string_pretty(&val).map_err(ServerError::into_internal)?,
         )))
     }
+    let token = headers
+        .get(shared::constant::LOGIN_TOKEN)
+        .map(|v| Token::decode(v.as_bytes()).ok_or(ServerError::Fuck))
+        .transpose()?;
     match message {
         FrontMessage::LoginUser(email, pwd) => {
             return login_user(email, pwd).await;
         }
         FrontMessage::Logout => {
-            return Ok((
-                CookieJar::new().add(
-                    Cookie::build(shared::cookies::LOGIN_STATE)
-                        .removal()
-                        .build(),
-                ),
-                Json(()),
-            )
-                .into_response());
+            if let Some(token) = token {
+                remove_token(token).await;
+            }
+            return Ok((Json(()),).into_response());
         }
         _ => {}
     }
-    let logined_user = match jar.get(shared::cookies::LOGIN_STATE) {
-        Some(v) => {
-            let token = Token::decode(v.value().as_ref()).ok_or(ServerError::Fuck)?;
+    let logined_user = match token {
+        Some(token) => {
             let ret = get_user_login(token).await?;
             Some(ret)
         }

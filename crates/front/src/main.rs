@@ -18,56 +18,22 @@ mod problem;
 mod record;
 mod register;
 mod submit;
+mod utility;
+
+use utility::*;
 
 static LOGIN_STATE: RwLock<Option<LoginedUser>> = RwLock::new(None);
 
-static SERVER_ORIGIN: LazyLock<String> = LazyLock::new(|| {
-    // #[cfg(not(debug_assertions))]
-    // {
-    web_sys::window().unwrap().origin()
-    // }
-    // #[cfg(debug_assertions)]
-    // {
-    //     "http://localhost:5800".to_string()
-    // }
-});
-
-fn ws_origin() -> String {
-    let origin = SERVER_ORIGIN.as_str();
-    assert!(origin.starts_with("http") || origin.starts_with("https"));
-    format!(
-        "ws{}",
-        if origin.starts_with("http") {
-            &origin["http".len()..]
-        } else if origin.starts_with("https") {
-            &origin["https".len()..]
-        } else {
-            unreachable!()
-        }
-    )
-}
-
-async fn sleep(ms: u32) {
-    let js = include_str!("sleep.js");
-    let js = String::from(js).replace("TIME", &format!("{ms}"));
-    dioxus::document::eval(&js).await.unwrap();
-}
-
-async fn send_message<T>(msg: FrontMessage) -> eyre::Result<T>
-where
-    T: DeserializeOwned,
-{
-    let req = reqwest::Client::new()
-        .post(format!("{}/api/front", *SERVER_ORIGIN))
-        .json(&msg);
-    let resp = req.send().await?;
-    if resp.status() != StatusCode::OK {
-        let err: ServerError = resp.json().await?;
-        return Err(err.into());
+static SERVER_URL: LazyLock<String> = LazyLock::new(|| {
+    #[cfg(not(feature = "independent"))]
+    {
+        web_sys::window().unwrap().origin()
     }
-    let res = resp.json().await?;
-    Ok(res)
-}
+    #[cfg(feature = "independent")]
+    {
+        std::env::var("SERVER_URL").unwrap_or("http://localhost:5800".to_string())
+    }
+});
 
 #[derive(Debug, Clone, Routable, PartialEq)]
 enum Route {
@@ -129,7 +95,6 @@ fn Home() -> Element {
     }
 }
 
-/// Shared navbar component.
 #[component]
 fn Navbar() -> Element {
     rsx! {
@@ -137,36 +102,11 @@ fn Navbar() -> Element {
     }
 }
 
-fn auto_error(err: ServerError) {
-    tracing::error!("{err:#?}");
-    match err {
-        ServerError::LoginOutDated => {
-            login_outdated::login_outdated();
-        }
-        ServerError::NotFound => {
-            let url = web_sys::window().unwrap().location().as_string().unwrap();
-            notfound::notfound(url);
-        }
-        _ => {}
-    }
-}
-
 #[component]
 fn app() -> Element {
     let mut start = use_signal(|| false);
     use_future(move || async move {
-        let logined_user: Option<LoginedUser> =
-            match send_message(FrontMessage::GetLoginedUser).await {
-                Ok(ret) => ret,
-                Err(err) => {
-                    if let Some(ServerError::LoginOutDated) = err.downcast_ref::<ServerError>() {
-                    } else {
-                        Err::<(), _>(err).unwrap();
-                    }
-                    None
-                }
-            };
-        *LOGIN_STATE.write().unwrap() = logined_user;
+        init_login_state().await;
         start.set(true);
     });
 

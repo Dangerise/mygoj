@@ -24,7 +24,6 @@ mod on_server {
     use axum::body::Body;
     use axum::http::StatusCode;
     use axum::response::{IntoResponse, Response};
-    use axum_extra::extract::{CookieJar, cookie::Cookie};
     impl IntoResponse for ServerError {
         fn into_response(self) -> Response {
             let json = serde_json::to_string_pretty(&self).unwrap();
@@ -32,16 +31,7 @@ mod on_server {
                 .status(self.status_code())
                 .body(Body::new(json))
                 .unwrap();
-            if matches!(self, ServerError::LoginOutDated) {
-                (
-                    CookieJar::new()
-                        .add(Cookie::build(crate::cookies::LOGIN_STATE).removal().build()),
-                    resp,
-                )
-                    .into_response()
-            } else {
-                resp
-            }
+            resp
         }
     }
 

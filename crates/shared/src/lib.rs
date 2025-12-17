@@ -7,7 +7,7 @@ pub mod submission;
 pub mod front;
 pub mod user;
 pub mod token;
-pub mod cookies;
+pub mod constant;
 pub mod error;
 
 // use token::*;

@@ -11,17 +11,18 @@ compact_str.workspace = true
 dashmap.workspace = true
 dirs.workspace = true
 eyre.workspace = true
+hex.workspace = true
 rand.workspace = true
 rust-embed = { workspace = true, features = ["debug-embed"] }
 serde.workspace = true
 serde_json.workspace = true
-shared = { path = "../shared",features=["server"] }
+shared = { path = "../shared", features = ["server"] }
 static_init.workspace = true
+thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-util.workspace = true
 tower.workspace = true
+tower-http.workspace = true
 tracing.workspace = true
 tracing-subscriber.workspace = true
 uuid.workspace = true
-hex.workspace=true
-thiserror.workspace=true

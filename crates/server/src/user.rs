@@ -68,7 +68,10 @@ pub async fn register_user(
 #[dynamic]
 static LOGIN_STATES: DashMap<Token, Uid> = DashMap::new();
 
-pub async fn user_login(email: CompactString, password: CompactString) -> Result<Token, ServerError> {
+pub async fn user_login(
+    email: CompactString,
+    password: CompactString,
+) -> Result<Token, ServerError> {
     let uid = EMAILS.get(&email).ok_or(ServerError::UserNotFound)?;
     let user = USERS.get(&uid).unwrap();
     if user.password == password {
@@ -96,4 +99,8 @@ pub async fn get_user_login(token: Token) -> Result<LoginedUser, ServerError> {
         })
         .unwrap();
     Ok(user)
+}
+
+pub async fn remove_token(token: Token) {
+    LOGIN_STATES.remove(&token);
 }
