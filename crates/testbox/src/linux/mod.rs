@@ -85,6 +85,7 @@ impl TestBox for LinuxTestBox {
         let mut system = sysinfo::System::new();
         while !proc.is_finished() {
             if start.elapsed() > self.config.time_limit {
+                tracing::info!("manual kill for time");
                 kill().await?;
                 status = Status::TimeLimitExceed;
                 break;
@@ -95,6 +96,7 @@ impl TestBox for LinuxTestBox {
                 sysinfo::ProcessRefreshKind::nothing().with_memory(),
             );
             if memory as u64 > self.config.memory_limit {
+                tracing::info!("manual kill for memory");
                 kill().await?;
                 status = Status::MemoryLimitExceed;
                 break;
@@ -112,6 +114,9 @@ impl TestBox for LinuxTestBox {
         } else if res.status.code() != Some(0) && status == Status::Okay {
             status = Status::RuntimeError;
         }
+
+        let wall_time = start.elapsed();
+        tracing::info!("wall time {}", wall_time.as_millis());
 
         Ok(RunResult {
             time_used: res.rusage.stime,

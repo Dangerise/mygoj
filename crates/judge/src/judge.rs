@@ -136,6 +136,7 @@ async fn run_testcase(
 
 #[instrument]
 pub async fn run_all_cases(
+    rid: Rid,
     prog: &Path,
     problem_data: &ProblemData,
 ) -> eyre::Result<AllJudgeResult> {
@@ -144,15 +145,26 @@ pub async fn run_all_cases(
     let mut sum_time = 0;
     let mut verdict = Verdict::Ac;
     let mut cases_results = Vec::new();
-    for case in &problem_data.testcases {
-        let res = run_testcase(
-            &problem_data.pid,
-            prog,
-            problem_data.time_limit,
-            problem_data.memory_limit,
-            case,
-        )
-        .await?;
+
+    let mut cases = Vec::new();
+
+    for (idx, case) in problem_data.testcases.iter().enumerate() {
+        let case = case.clone();
+        let prog = prog.to_path_buf();
+        let time_limit = problem_data.time_limit;
+        let memory_limit = problem_data.memory_limit;
+        let pid = problem_data.pid.clone();
+        let handle = tokio::spawn(async move {
+            let res = run_testcase(&pid, &prog, time_limit, memory_limit, &case).await?;
+            let _: () =
+                send_message(JudgeMessage::SendSingleJudgeResult(rid, idx, res.clone())).await?;
+            Ok::<_, eyre::Report>(res)
+        });
+        cases.push(handle);
+    }
+
+    for handle in cases {
+        let res = handle.await.unwrap()?;
         memory = u32::max(memory, res.memory_used);
         max_time = u32::max(max_time, res.time_used);
         sum_time += res.time_used;
@@ -161,6 +173,7 @@ pub async fn run_all_cases(
         }
         cases_results.push(res);
     }
+
     Ok(AllJudgeResult {
         cases: cases_results,
         verdict,
@@ -223,7 +236,7 @@ pub async fn judge(rid: Rid) -> eyre::Result<()> {
     ))
     .await?;
 
-    let res = run_all_cases(&prog, &problem_data).await?;
+    let res = run_all_cases(rid, &prog, &problem_data).await?;
 
     let _: () = send_message(JudgeMessage::SendAllJudgeResults(rid, res)).await?;
 
