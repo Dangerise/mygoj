@@ -39,7 +39,7 @@ pub async fn main() -> eyre::Result<()> {
 
     println!("{:#?}", &app);
 
-    let listener = TcpListener::bind("127.0.0.1:5800").await.unwrap();
+    let listener = TcpListener::bind("0.0.0.0:5800").await.unwrap();
 
     tracing::info!("running");
 
