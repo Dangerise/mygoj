@@ -20,6 +20,15 @@ pub fn ws_origin() -> String {
     )
 }
 
+#[component]
+pub fn Common(content: String) -> Element {
+    rsx! {
+        div { class: "common",
+            Markdown { md: content }
+        }
+    }
+}
+
 pub async fn sleep(ms: u32) {
     let js = include_str!("sleep.js");
     let js = String::from(js).replace("TIME", &format!("{ms}"));

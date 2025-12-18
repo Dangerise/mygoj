@@ -17,13 +17,7 @@ pub fn Logout() -> Element {
         sleep(1500).await;
         navigator().push(Route::Home {});
     });
-    if done.cloned() {
-        rsx! {
-            p { "you have been successfully logout" }
-        }
-    } else {
-        rsx! {
-            p { "please wait a moment" }
-        }
+    rsx! {
+        Common { content: if done.cloned() { "you have been successfully logout" } else { "please wait a moment" } }
     }
 }

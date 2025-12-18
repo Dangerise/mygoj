@@ -12,7 +12,6 @@ pub fn notfound(url: String) {
 pub fn NotFound() -> Element {
     let resource=RESOURCE.lock().unwrap().clone();
     rsx! {
-        p { "404 not found " }
-        p { "resource {resource}" }
+        Common { content: "404 not found\nresource {resource}" }
     }
 }

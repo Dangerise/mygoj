@@ -2,14 +2,13 @@ use super::*;
 use std::sync::Mutex;
 
 static REDIRECT: Mutex<Option<Route>> = Mutex::new(None);
+static TIP: Mutex<bool> = Mutex::new(false);
 
-fn login_required(redirect: Route) -> Element {
-    rsx! {
-        p {
-            "you need to login to access the page"
-        }
-        Login {  }
-    }
+pub fn login_required(redirect: Route) {
+    let mut red = REDIRECT.lock().unwrap();
+    *red = Some(redirect);
+    *TIP.lock().unwrap() = true;
+    navigator().push(Route::Login {});
 }
 
 async fn login(email: String, password: String) {
@@ -42,6 +41,17 @@ pub fn Login() -> Element {
     };
 
     rsx! {
+        {
+            let mut tip = TIP.lock().unwrap();
+            if *tip {
+                *tip = false;
+                rsx! {
+                    p { "you need to login to access the page" }
+                }
+            } else {
+                rsx! {}
+            }
+        }
         p { "email" }
         input {
             onchange: move |evt| {
@@ -54,6 +64,6 @@ pub fn Login() -> Element {
                 password.set(evt.value());
             },
         }
-        button { onclick: login ,"login"}
+        button { onclick: login, "login" }
     }
 }

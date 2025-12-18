@@ -4,14 +4,9 @@ use shared::submission::*;
 #[component]
 pub fn Submit(pid: Pid) -> Element {
     if LOGIN_STATE.read().unwrap().is_none() {
-        navigator().push(Route::Login {});
+        login::login_required(Route::Submit { pid: pid.clone() });
     }
     let mut code = use_signal(String::new);
-    let rid: Signal<Option<Rid>> = use_signal(|| None);
-    if let Some(rid) = *rid.read() {
-        let nav = navigator();
-        nav.push(Route::Record { rid });
-    }
     rsx! {
         h1 { "submit to {pid}" }
         Link { to: Route::Problem { pid: pid.clone() }, "back to problem" }
@@ -26,11 +21,10 @@ pub fn Submit(pid: Pid) -> Element {
                     code: code.cloned(),
                     pid: pid.clone(),
                 };
-                let mut rid = rid;
                 spawn(async move {
                     let submission = submission;
-                    let t: Rid = send_message(FrontMessage::Submit(submission)).await.unwrap();
-                    rid.set(Some(t));
+                    let rid: Rid = send_message(FrontMessage::Submit(submission)).await.unwrap();
+                    navigator().push(Route::Record { rid });
                 });
             },
             "submit"

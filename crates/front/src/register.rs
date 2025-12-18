@@ -40,8 +40,12 @@ pub fn UserRegister() -> Element {
             nav.push(Route::Login {});
         });
         return rsx! {
-            p { "Your account has been successfully registered " }
-            p { "We will jump to login page later" }
+            Common {
+                content: concat!(
+                    "Your account has been successfully registered ",
+                    "We will jump to login page later",
+                ),
+            }
         };
     }
 

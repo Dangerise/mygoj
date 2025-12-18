@@ -13,6 +13,7 @@ mod judge_status;
 mod login;
 mod login_outdated;
 mod logout;
+mod md;
 mod notfound;
 mod problem;
 mod record;
@@ -20,6 +21,7 @@ mod register;
 mod submit;
 mod utility;
 
+use md::Markdown;
 use utility::*;
 
 static LOGIN_STATE: RwLock<Option<LoginedUser>> = RwLock::new(None);
@@ -77,21 +79,17 @@ fn Home() -> Element {
     let welcome = || {
         if let Some(login_state) = login_state {
             let nickname = login_state.nickname;
-            rsx! {
-                "Welcome ! {nickname}"
-            }
+            rsx! { "Welcome ! {nickname}" }
         } else {
-            rsx! {
-                "Welcome ! but please login first !"
-            }
+            rsx! { "Welcome ! but please login first !" }
         }
     };
 
     rsx! {
-        h1 { "Hello, It's Mygoj !!! " }
-        {
-            welcome()
+        div { class: "home",
+            Markdown { md: "# It's Mygoj !!!" }
         }
+        {welcome()}
     }
 }
 

@@ -12,8 +12,6 @@ pub fn LoginOutDated() -> Element {
         navigator().push(Route::Login {});
     });
     rsx! {
-        p { "Your login has out dated !" }
-        p { "please login again " }
-        p { "We will jump to login page later !" }
+        Common { content: r#"Your login has out dataed !\nplease login againWe will jump to login page later"# }
     }
 }
