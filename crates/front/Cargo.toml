@@ -11,14 +11,15 @@ eyre.workspace = true
 futures-util.workspace = true
 getrandom = { workspace = true, features = ["wasm_js"] }
 pharos = "0.5.3"
+pulldown-cmark = "0.13.0"
 reqwest = { workspace = true, features = ["cookies"] }
 serde.workspace = true
+serde_json.workspace = true
 shared = { path = "../shared" }
 uuid = { workspace = true, features = ["js"] }
-web-sys = { version = "0.3.83", features = ["Window","Storage"] }
+web-sys = { version = "0.3.83", features = ["Storage", "Window"] }
 ws_stream_wasm = "0.7.5"
-serde_json.workspace = true
-pulldown-cmark = "0.13.0"
 
 [features]
 independent = []
+ws_for_record = []

@@ -69,7 +69,30 @@ mod inner {
         }
     }
 
-    async fn ws(rid: Rid, mut record: Signal<Option<Record>>) {
+    fn handle_record_message(msg: RecordMessage, mut record: Signal<Option<Record>>) {
+        let mut wr = record.write();
+        let status = &mut wr.as_mut().unwrap().status;
+        match msg {
+            RecordMessage::CompileError(ce) => *status = RecordStatus::CompileError(ce),
+            RecordMessage::Compiled(cnt) => {
+                *status = RecordStatus::Running(vec![const { None }; cnt])
+            }
+            RecordMessage::NewSingleResult(idx, single) => {
+                let RecordStatus::Running(status) = status else {
+                    unreachable!()
+                };
+                status[idx] = Some(single);
+            }
+            RecordMessage::Completed(all) => {
+                *status = RecordStatus::Completed(all);
+            }
+            RecordMessage::Compiling => {
+                *status = RecordStatus::Compiling;
+            }
+        }
+    }
+
+    async fn ws(rid: Rid, record: Signal<Option<Record>>) {
         let url = format!("{}/api/front/record_ws?rid={}", ws_origin(), rid);
         tracing::info!("try to ws to {url}");
         let Ok((_, mut stream)) = WsMeta::connect(&url, None).await else {
@@ -88,26 +111,16 @@ mod inner {
             };
             let msg: RecordMessage = serde_json::from_str(&text).unwrap();
             tracing::info!("recv msg {msg:#?}");
-            let mut wr = record.write();
-            let status = &mut wr.as_mut().unwrap().status;
-            match msg {
-                RecordMessage::CompileError(ce) => *status = RecordStatus::CompileError(ce),
-                RecordMessage::Compiled(cnt) => {
-                    *status = RecordStatus::Running(vec![const { None }; cnt])
-                }
-                RecordMessage::NewSingleResult(idx, single) => {
-                    let RecordStatus::Running(status) = status else {
-                        unreachable!()
-                    };
-                    status[idx] = Some(single);
-                }
-                RecordMessage::Completed(all) => {
-                    *status = RecordStatus::Completed(all);
-                }
-                RecordMessage::Compiling => {
-                    *status = RecordStatus::Compiling;
-                }
-            }
+            handle_record_message(msg, record);
+        }
+    }
+
+    async fn manual_refresh(rid: Rid, mut record: Signal<Option<Record>>) {
+        loop {
+            let Ok(t) = send_message(FrontMessage::GetRecord(rid)).await else {
+                return;
+            };
+            record.set(Some(t));
         }
     }
 
@@ -119,7 +132,10 @@ mod inner {
             let done = t.status.done();
             record.set(Some(t));
             if !done {
+                #[cfg(feature = "ws_for_record")]
                 ws(rid, record.clone()).await;
+                #[cfg(not(feature = "ws_for_record"))]
+                manual_refresh(rid, record).await;
             }
             ()
         });
