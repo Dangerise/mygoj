@@ -69,11 +69,14 @@ mod inner {
         }
     }
 
-    fn handle_record_message(msg: RecordMessage, mut record: Signal<Option<Record>>) {
+    fn handle_record_message(msg: RecordMessage, mut record: Signal<Option<Record>>) -> bool {
         let mut wr = record.write();
         let status = &mut wr.as_mut().unwrap().status;
         match msg {
-            RecordMessage::CompileError(ce) => *status = RecordStatus::CompileError(ce),
+            RecordMessage::CompileError(ce) => {
+                *status = RecordStatus::CompileError(ce);
+                return false;
+            }
             RecordMessage::Compiled(cnt) => {
                 *status = RecordStatus::Running(vec![const { None }; cnt])
             }
@@ -85,11 +88,13 @@ mod inner {
             }
             RecordMessage::Completed(all) => {
                 *status = RecordStatus::Completed(all);
+                return false;
             }
             RecordMessage::Compiling => {
                 *status = RecordStatus::Compiling;
             }
         }
+        true
     }
 
     async fn ws(rid: Rid, record: Signal<Option<Record>>) {
@@ -111,16 +116,26 @@ mod inner {
             };
             let msg: RecordMessage = serde_json::from_str(&text).unwrap();
             tracing::info!("recv msg {msg:#?}");
-            handle_record_message(msg, record);
+            if !handle_record_message(msg, record) {
+                break;
+            }
         }
     }
 
     async fn manual_refresh(rid: Rid, mut record: Signal<Option<Record>>) {
         loop {
-            let Ok(t) = send_message(FrontMessage::GetRecord(rid)).await else {
+            let Ok(t): Result<Record, _> = send_message(FrontMessage::GetRecord(rid)).await else {
                 return;
             };
+            tracing::info!("udpate record {t:#?}");
+            let stop = matches!(
+                t.status,
+                RecordStatus::Completed(_) | RecordStatus::CompileError(_)
+            );
             record.set(Some(t));
+            if stop {
+                return;
+            }
         }
     }
 
