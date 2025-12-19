@@ -20,6 +20,7 @@ mod record;
 mod register;
 mod submit;
 mod utility;
+mod navbar;
 
 use md::Markdown;
 use utility::*;
@@ -71,6 +72,7 @@ use problem::Problem;
 use record::Record;
 use register::UserRegister;
 use submit::Submit;
+use navbar::Navbar;
 
 #[component]
 fn Home() -> Element {
@@ -93,12 +95,6 @@ fn Home() -> Element {
     }
 }
 
-#[component]
-fn Navbar() -> Element {
-    rsx! {
-        Outlet::<Route> {}
-    }
-}
 
 #[component]
 fn app() -> Element {
