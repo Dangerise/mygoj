@@ -4,7 +4,7 @@ pub fn clear_cache() {
     storage()
         .remove_item(shared::constant::LOGIN_TOKEN)
         .unwrap();
-    *LOGIN_STATE.write().unwrap() = None;
+    *LOGIN_STATE.write() = None;
 }
 
 #[component]

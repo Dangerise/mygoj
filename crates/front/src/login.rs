@@ -19,7 +19,7 @@ async fn login(email: String, password: String) {
     storage()
         .set(shared::constant::LOGIN_TOKEN, &token)
         .unwrap();
-    *LOGIN_STATE.write().unwrap() = Some(login_user);
+    *LOGIN_STATE.write() = Some(login_user);
 }
 
 #[component]

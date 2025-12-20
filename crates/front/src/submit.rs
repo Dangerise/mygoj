@@ -3,7 +3,7 @@ use shared::submission::*;
 
 #[component]
 pub fn Submit(pid: Pid) -> Element {
-    if LOGIN_STATE.read().unwrap().is_none() {
+    if LOGIN_STATE.read().is_none() {
         login::login_required(Route::Submit { pid: pid.clone() });
     }
     let mut code = use_signal(String::new);

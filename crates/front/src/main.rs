@@ -7,26 +7,26 @@ use shared::front::FrontMessage;
 use shared::problem::Pid;
 use shared::record::Rid;
 use shared::user::LoginedUser;
-use std::sync::{LazyLock, RwLock};
+use std::sync::LazyLock;
 
+mod home;
 mod judge_status;
 mod login;
 mod login_outdated;
 mod logout;
 mod md;
+mod navbar;
 mod notfound;
 mod problem;
 mod record;
 mod register;
 mod submit;
 mod utility;
-mod navbar;
 
 use md::Markdown;
 use utility::*;
 
-static LOGIN_STATE: RwLock<Option<LoginedUser>> = RwLock::new(None);
-
+static LOGIN_STATE: GlobalSignal<Option<LoginedUser>> = GlobalSignal::new(|| None);
 static SERVER_URL: LazyLock<String> = LazyLock::new(|| {
     #[cfg(not(feature = "independent"))]
     {
@@ -63,38 +63,17 @@ enum Route {
     Logout {},
 }
 
+use home::Home;
 use judge_status::JudgeStatus;
 use login::Login;
 use login_outdated::LoginOutDated;
 use logout::Logout;
+use navbar::Navbar;
 use notfound::NotFound;
 use problem::Problem;
 use record::Record;
 use register::UserRegister;
 use submit::Submit;
-use navbar::Navbar;
-
-#[component]
-fn Home() -> Element {
-    let login_state = LOGIN_STATE.read().unwrap().clone();
-
-    let welcome = || {
-        if let Some(login_state) = login_state {
-            let nickname = login_state.nickname;
-            rsx! { "Welcome ! {nickname}" }
-        } else {
-            rsx! { "Welcome ! but please login first !" }
-        }
-    };
-
-    rsx! {
-        div { class: "home",
-            Markdown { md: "# It's Mygoj !!!" }
-        }
-        {welcome()}
-    }
-}
-
 
 #[component]
 fn app() -> Element {

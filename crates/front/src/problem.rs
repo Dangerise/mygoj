@@ -1,6 +1,5 @@
 use super::*;
 pub use shared::problem::ProblemFront;
-use std::sync::Arc;
 
 #[component]
 fn loading_page() -> Element {
