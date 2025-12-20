@@ -9,6 +9,7 @@ use shared::record::Rid;
 use shared::user::LoginedUser;
 use std::sync::LazyLock;
 
+mod error;
 mod home;
 mod judge_status;
 mod login;
@@ -22,9 +23,12 @@ mod record;
 mod register;
 mod submit;
 mod utility;
+mod components;
 
+use error::{ErrorKind, Split as _};
 use md::Markdown;
 use utility::*;
+use components::*;
 
 static LOGIN_STATE: GlobalSignal<Option<LoginedUser>> = GlobalSignal::new(|| None);
 static SERVER_URL: LazyLock<String> = LazyLock::new(|| {

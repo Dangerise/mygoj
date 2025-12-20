@@ -11,15 +11,14 @@ pub fn login_required(redirect: Route) {
     navigator().push(Route::Login {});
 }
 
-async fn login(email: String, password: String) {
+async fn login(email: String, password: String) -> eyre::Result<()> {
     let (token, login_user): (String, LoginedUser) =
-        send_message(FrontMessage::LoginUser(email.into(), password.into()))
-            .await
-            .unwrap();
+        send_message(FrontMessage::LoginUser(email.into(), password.into())).await?;
     storage()
         .set(shared::constant::LOGIN_TOKEN, &token)
         .unwrap();
     *LOGIN_STATE.write() = Some(login_user);
+    Ok(())
 }
 
 #[component]
@@ -27,9 +26,32 @@ pub fn Login() -> Element {
     let mut email = use_signal(|| String::new());
     let mut password = use_signal(|| String::new());
 
+    let mut error_msg = use_signal(|| None);
     let login = move |_| {
         spawn(async move {
-            login(email.cloned(), password.cloned()).await;
+            match login(email.cloned(), password.cloned()).await {
+                Ok(_) => {}
+                Err(err) => {
+                    let err = err.split();
+                    match err {
+                        ErrorKind::Client(err) => {
+                            error_msg.set(format!("client error \n{err:#?}").into());
+                        }
+                        ErrorKind::Server(err) => match &err {
+                            ServerError::UserNotFound => {
+                                error_msg.set("user not found".to_string().into());
+                            }
+                            ServerError::PasswordWrong => {
+                                error_msg.set("wrong password".to_string().into());
+                            }
+                            _ => {
+                                error_msg.set(format!("other error \n{err:#?}").into());
+                            }
+                        },
+                    }
+                    return;
+                }
+            }
             let nav = navigator();
             let redirect = REDIRECT.lock().unwrap();
             if let Some(redirect) = &*redirect {
@@ -40,7 +62,32 @@ pub fn Login() -> Element {
         });
     };
 
+    let dialog = || -> Element {
+        let msg = error_msg
+            .read()
+            .as_ref()
+            .unwrap_or(&String::new())
+            .to_string();
+        rsx! {
+            DialogRoot { open: error_msg.read().is_some(),
+                DialogContent {
+                    DialogTitle { "Error" }
+                    DialogDescription {
+                        Multilines { content: msg }
+                    }
+                    button {
+                        onclick: move |_| {
+                            error_msg.set(None);
+                        },
+                        "confirm"
+                    }
+                }
+            }
+        }
+    };
+
     rsx! {
+        {dialog()}
         {
             let mut tip = TIP.lock().unwrap();
             if *tip {
