@@ -10,6 +10,7 @@ dioxus = { version = "0.7.2", features = ["router", "web"] }
 eyre.workspace = true
 futures-util.workspace = true
 getrandom = { workspace = true, features = ["wasm_js"] }
+markdown = "1.0.0"
 pharos = "0.5.3"
 pulldown-cmark = "0.13.0"
 reqwest = { workspace = true, features = ["cookies"] }
@@ -17,7 +18,8 @@ serde.workspace = true
 serde_json.workspace = true
 shared = { path = "../shared" }
 uuid = { workspace = true, features = ["js"] }
-web-sys = { version = "0.3.83", features = ["Storage", "Window"] }
+wasm-bindgen-futures = "0.4.56"
+web-sys = { version = "0.3.83", features = ["Storage", "Window","Navigator","Clipboard"] }
 ws_stream_wasm = "0.7.5"
 
 [features]

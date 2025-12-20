@@ -1,5 +1,6 @@
 use super::*;
 pub use shared::problem::ProblemFront;
+use std::sync::Arc;
 
 #[component]
 fn loading_page() -> Element {
@@ -28,7 +29,7 @@ fn render_problem(front: ProblemFront) -> Element {
     rsx! {
         h1 { "{pid} {title}" }
         p { "time {time_limit} ms memory {memory_limit} mb" }
-        p { "{statement}" }
+        Markdown { md: statement }
         Link { to: Route::Submit { pid }, "To submit" }
     }
 }
@@ -39,9 +40,7 @@ pub fn Problem(pid: Pid) -> Element {
         let pid = pid.clone();
         use_resource(move || {
             let pid = pid.clone();
-            async move {
-                send_message::<ProblemFront>(FrontMessage::GetProblemFront(pid)).await
-            }
+            async move { send_message::<ProblemFront>(FrontMessage::GetProblemFront(pid)).await }
         })
     };
     if let Some(front) = &*front.read() {
