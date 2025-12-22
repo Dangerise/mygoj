@@ -109,7 +109,9 @@ pub async fn send_problem_file(pid: Pid, filename: &str) -> Result<Response, Ser
     if !path.exists() {
         return Err(ServerError::NotFound);
     }
-    let file = fs::File::open(path).await.map_err(ServerError::into_internal)?;
+    let file = fs::File::open(path)
+        .await
+        .map_err(ServerError::into_internal)?;
     let stream = ReaderStream::with_capacity(file, 1 << 20);
     let resp = Response::new(Body::from_stream(stream));
     Ok(resp)

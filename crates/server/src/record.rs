@@ -50,7 +50,7 @@ pub async fn submit(uid: Uid, submission: Submission) -> Result<Rid, ServerError
         rid = last_rid.clone();
     }
 
-    let now = chrono::Utc::now().timestamp() as u64;
+    let now = chrono::Utc::now().timestamp();
 
     problem_read_lock(&pid).await;
     let case_count = read_problem(&pid).await?.testcases.len();
@@ -61,7 +61,7 @@ pub async fn submit(uid: Uid, submission: Submission) -> Result<Rid, ServerError
         pid: pid.clone(),
         code,
         status: RecordStatus::Waiting,
-        timestamp: now,
+        time: now,
     };
 
     RECORDS.insert(rid, record);

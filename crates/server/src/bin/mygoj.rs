@@ -27,7 +27,10 @@ impl Serve {
 struct Init {}
 
 impl Init {
-    async fn init(&self) {}
+    async fn init(&self) {
+        let db = storage_dir().join("data.db");
+        init::init_db(&db).await.unwrap();
+    }
 }
 
 #[derive(Debug, Subcommand, Clone)]

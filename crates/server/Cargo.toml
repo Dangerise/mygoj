@@ -12,6 +12,7 @@ compact_str.workspace = true
 dashmap.workspace = true
 dirs.workspace = true
 eyre.workspace = true
+futures-util.workspace = true
 hex.workspace = true
 rand.workspace = true
 rust-embed = { workspace = true, features = ["debug-embed"] }

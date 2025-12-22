@@ -9,6 +9,7 @@ pub struct UserRegistration {
     pub email: CompactString,
     pub password: CompactString,
     pub nickname: CompactString,
+    pub username: CompactString,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Hash, Eq)]

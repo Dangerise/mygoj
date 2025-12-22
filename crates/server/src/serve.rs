@@ -8,7 +8,6 @@ use tower_http::timeout::TimeoutLayer;
 
 pub async fn startup() {
     tokio::spawn(judge::track_judge_machines());
-    dbg::dbg().await;
 }
 
 pub fn router() -> Router {

@@ -1,4 +1,3 @@
-mod dbg;
 mod front;
 mod judge;
 mod problem;
@@ -9,3 +8,9 @@ pub mod init;
 pub mod serve;
 
 use shared::error::ServerError;
+use std::path::PathBuf;
+
+#[track_caller]
+pub fn storage_dir() -> PathBuf {
+    dirs::home_dir().unwrap().join("mygoj")
+}

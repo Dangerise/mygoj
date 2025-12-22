@@ -1,16 +1,42 @@
 use super::ServerError;
 use compact_str::CompactString;
 use dashmap::{DashMap, DashSet};
+use serde::{Deserialize, Serialize};
 use shared::token::Token;
 use shared::user::*;
+use shared::from_json_in_row;
+use sqlx::sqlite::SqliteRow;
 use static_init::dynamic;
 
-#[derive(Debug)]
+#[derive(Debug, Serialize, Deserialize)]
 pub struct User {
     pub uid: Uid,
     pub email: CompactString,
+    pub username: CompactString,
     pub password: CompactString,
     pub nickname: CompactString,
+    pub created_time: i64,
+}
+
+impl sqlx::FromRow<'_, SqliteRow> for User {
+    fn from_row(row: &SqliteRow) -> Result<Self, sqlx::Error> {
+        from_json_in_row(row)
+    }
+}
+
+impl User {
+    pub async fn insert_db(&self, exec: &sqlx::SqlitePool) -> Result<(), sqlx::Error> {
+        sqlx::query("INSERT INTO users (uid,email,username,password,nickname,created_time,json) VALUES ($1,$2,$3,$4,$5,$6,$7)")
+            .bind(self.uid.0 as i64)
+            .bind(self.email.as_str())
+            .bind(self.username.as_str())
+            .bind(self.password.as_str())
+            .bind(self.nickname.as_str())
+            .bind(self.created_time)
+            .bind(serde_json::to_string(self).unwrap())
+            .execute(exec).await?;
+        Ok(())
+    }
 }
 
 #[dynamic]
@@ -30,6 +56,7 @@ pub async fn register_user(
         email,
         password,
         nickname,
+        username,
     }: UserRegistration,
 ) -> Result<Uid, ServerError> {
     if email.len() > 50 || password.len() > 50 {
@@ -57,6 +84,8 @@ pub async fn register_user(
             email,
             password,
             nickname,
+            username,
+            created_time: chrono::Utc::now().timestamp(),
         },
     );
 

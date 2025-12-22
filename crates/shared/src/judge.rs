@@ -36,7 +36,6 @@ pub enum Verdict {
     Re,
     Tle,
     Mle,
-    Ce,
     Uke,
 }
 
@@ -48,8 +47,17 @@ impl Verdict {
             Verdict::Tle => 2,
             Verdict::Wa => 3,
             Verdict::Re => 4,
-            Verdict::Ce => 5,
             Verdict::Uke => 6,
+        }
+    }
+    pub fn flag(&self) -> RecordFlag {
+        match self {
+            Self::Ac => RecordFlag::Ac,
+            Self::Wa => RecordFlag::Wa,
+            Self::Re => RecordFlag::Re,
+            Self::Tle => RecordFlag::Tle,
+            Self::Mle => RecordFlag::Mle,
+            Self::Uke => RecordFlag::Uke,
         }
     }
 }
@@ -71,9 +79,6 @@ impl std::fmt::Display for Verdict {
             }
             Self::Mle => {
                 write!(f, "Memory Limit Exceed")
-            }
-            Self::Ce => {
-                write!(f, "Compile Error")
             }
             Self::Uke => {
                 write!(f, "Unknown Error")

@@ -7,6 +7,7 @@ pub fn UserRegister() -> Element {
     let mut password = use_signal(|| String::new());
     let mut confirm = use_signal(|| String::new());
     let mut nickname = use_signal(|| String::new());
+    let mut username = use_signal(|| String::new());
 
     let mut pwd_ne = use_signal(|| false);
     let mut completed = use_signal(|| false);
@@ -23,6 +24,7 @@ pub fn UserRegister() -> Element {
         pwd_ne.set(false);
         spawn(async move {
             let _: Uid = send_message(FrontMessage::RegisterUser(UserRegistration {
+                username: username.cloned().into(),
                 email: email.cloned().into(),
                 password: password.cloned().into(),
                 nickname: nickname.cloned().into(),
@@ -50,6 +52,12 @@ pub fn UserRegister() -> Element {
     }
 
     rsx! {
+        p { "nickname" }
+        input {
+            onchange: move |evt| {
+                username.set(evt.value());
+            },
+        }
         p { "email" }
         input {
             onchange: move |evt| {
