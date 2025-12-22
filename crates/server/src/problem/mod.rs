@@ -5,6 +5,8 @@ use dashmap::DashMap;
 use problem_lock::ProblemLock;
 use serde::{Deserialize, Serialize};
 pub use shared::problem::*;
+use shared::user::Uid;
+use sqlx::{FromRow, Row, SqlitePool, sqlite::SqliteRow};
 use static_init::dynamic;
 use std::path::PathBuf;
 use tokio::fs;
@@ -15,12 +17,32 @@ static PROBLEM_LOCKS: DashMap<Pid, ProblemLock> = DashMap::new();
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Problem {
+    pub pid: Pid,
+    pub owner: Uid,
     pub title: String,
     pub statement: String,
     pub memory_limit: u32,
     pub time_limit: u32,
     pub testcases: Vec<Testcase>,
     pub files: Vec<ProblemFile>,
+}
+
+impl FromRow<'_, SqliteRow> for Problem {
+    fn from_row(row: &SqliteRow) -> Result<Self, sqlx::Error> {
+        shared::from_json_in_row(row)
+    }
+}
+
+impl Problem {
+    pub async fn insert_db(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
+        sqlx::query("INSERT INTO problems (pid,owner,json) VALUES ($1,$2,$3)")
+            .bind(self.pid.0.as_str())
+            .bind(self.owner.0 as i64)
+            .bind(serde_json::to_string(self).unwrap())
+            .execute(pool)
+            .await?;
+        Ok(())
+    }
 }
 
 pub async fn read_problem(pid: &Pid) -> Result<Problem, ServerError> {
