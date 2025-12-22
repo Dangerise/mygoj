@@ -7,6 +7,7 @@ edition = "2024"
 axum.workspace = true
 axum-extra.workspace = true
 chrono.workspace = true
+clap.workspace = true
 compact_str.workspace = true
 dashmap.workspace = true
 dirs.workspace = true
@@ -17,6 +18,7 @@ rust-embed = { workspace = true, features = ["debug-embed"] }
 serde.workspace = true
 serde_json.workspace = true
 shared = { path = "../shared", features = ["server"] }
+sqlx.workspace = true
 static_init.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
