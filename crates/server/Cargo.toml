@@ -14,6 +14,7 @@ dirs.workspace = true
 eyre.workspace = true
 futures-util.workspace = true
 hex.workspace = true
+moka.workspace = true
 rand.workspace = true
 rust-embed = { workspace = true, features = ["debug-embed"] }
 serde.workspace = true

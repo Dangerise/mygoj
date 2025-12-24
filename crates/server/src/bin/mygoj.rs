@@ -28,6 +28,7 @@ struct Init {}
 
 impl Init {
     async fn init(&self) {
+        init::init_fs(storage_dir()).await.unwrap();
         let db = storage_dir().join("data.db");
         init::init_db(&db).await.unwrap();
     }

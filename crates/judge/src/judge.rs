@@ -15,9 +15,9 @@ async fn sync_problem_file(pid: &Pid, file: &ProblemFile) -> eyre::Result<()> {
         fs::create_dir_all(dir).await?;
     }
 
-    let path = problem_file_path(pid, &file.name);
+    let path = problem_file_path(pid, &file.path);
     let content: Vec<u8> =
-        get_bin(JudgeMessage::GetProblemFile(pid.clone(), file.name.clone())).await?;
+        get_bin(JudgeMessage::GetProblemFile(pid.clone(), file.path.clone())).await?;
     tracing::info!("write to {}", path.display());
     fs::write(path, content).await?;
     Ok(())
@@ -34,10 +34,10 @@ async fn prepare(data: &ProblemData) -> eyre::Result<()> {
 
     for case in testcases {
         for file in files {
-            if file.name == case.input_file {
+            if file.path == case.input_file {
                 sync_problem_file(pid, file).await?;
             }
-            if file.name == case.output_file {
+            if file.path == case.output_file {
                 sync_problem_file(pid, file).await?;
             }
         }

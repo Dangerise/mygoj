@@ -1,5 +1,6 @@
 use super::*;
 use compact_str::CompactString;
+use uuid::Uuid;
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq, Default, Eq, Hash)]
 pub struct Pid(pub CompactString);
@@ -21,19 +22,15 @@ pub struct Testcase {
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProblemFile {
-    pub name: CompactString,
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
-pub struct ProblemFileRequest {
-    pub pid: Pid,
-    pub name: CompactString,
+    pub path: CompactString,
+    pub uuid: Uuid,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProblemData {
     pub pid: Pid,
     pub testcases: Vec<Testcase>,
+    #[serde(default)]
     pub files: Vec<ProblemFile>,
     pub time_limit: u32,
     pub memory_limit: u32,
@@ -43,7 +40,7 @@ impl ProblemData {
     pub fn check_unique(&self) -> bool {
         for i in 0..self.files.len() {
             for j in i + 1..self.files.len() {
-                if self.files[i].name == self.files[j].name {
+                if self.files[i].path == self.files[j].path {
                     return false;
                 }
             }
