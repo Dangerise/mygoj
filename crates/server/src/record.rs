@@ -1,6 +1,6 @@
 use super::ServerError;
 use super::judge::JUDGE_QUEUE;
-use super::problem::{problem_read_lock, problem_read_unlock, read_problem};
+use super::problem::{problem_read_lock, problem_read_unlock, get_problem};
 use dashmap::DashMap;
 use shared::judge::SingleJudgeResult;
 use shared::record::*;
@@ -53,7 +53,7 @@ pub async fn submit(uid: Uid, submission: Submission) -> Result<Rid, ServerError
     let now = chrono::Utc::now().timestamp();
 
     problem_read_lock(&pid).await;
-    let case_count = read_problem(&pid).await?.testcases.len();
+    let case_count = get_problem(&pid).await?.testcases.len();
 
     let record = Record {
         uid,

@@ -1,3 +1,5 @@
+mod cache;
+mod db;
 mod problem_lock;
 
 use super::ServerError;
@@ -6,7 +8,6 @@ use problem_lock::ProblemLock;
 use serde::{Deserialize, Serialize};
 pub use shared::problem::*;
 use shared::user::Uid;
-use sqlx::{FromRow, SqlitePool, sqlite::SqliteRow};
 use static_init::dynamic;
 use std::path::PathBuf;
 use tokio::fs;
@@ -15,7 +16,7 @@ use tokio_util::io::ReaderStream;
 #[dynamic]
 static PROBLEM_LOCKS: DashMap<Pid, ProblemLock> = DashMap::new();
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Problem {
     pub pid: Pid,
     pub owner: Option<Uid>,
@@ -27,43 +28,20 @@ pub struct Problem {
     pub files: Vec<ProblemFile>,
 }
 
-impl FromRow<'_, SqliteRow> for Problem {
-    fn from_row(row: &SqliteRow) -> Result<Self, sqlx::Error> {
-        shared::from_json_in_row(row)
+pub async fn get_problem(pid: &Pid) -> Result<Problem, ServerError> {
+    if let Some(ret) = cache::get_problem(pid).await {
+        return Ok(ret);
     }
-}
-
-impl Problem {
-    pub async fn insert_db(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO problems (pid,owner,json) VALUES ($1,$2,$3)")
-            .bind(self.pid.0.as_str())
-            .bind(self.owner.map(|x| x.0 as i64))
-            .bind(serde_json::to_string(self).unwrap())
-            .execute(pool)
-            .await?;
-        Ok(())
-    }
-}
-
-pub async fn read_problem(pid: &Pid) -> Result<Problem, ServerError> {
-    let path = dirs::home_dir()
-        .unwrap()
-        .join("mygoj")
-        .join("problems")
-        .join(&pid.0)
-        .join("config.json");
-    if !path.exists() {
-        return Err(ServerError::NotFound);
-    }
-    let json = fs::read_to_string(&path)
-        .await
-        .map_err(ServerError::into_internal)?;
-    let problem: Problem = serde_json::from_str(&json).map_err(ServerError::into_internal)?;
-    Ok(problem)
+    let ret = db::get_problem(pid).await.map_err(|e| match e {
+        sqlx::Error::RowNotFound => ServerError::NotFound,
+        _ => ServerError::into_internal(e),
+    })?;
+    cache::update_problem(pid, ret.clone()).await;
+    Ok(ret)
 }
 
 pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
-    let problem = read_problem(pid).await?;
+    let problem = get_problem(pid).await?;
 
     let front = ProblemFront {
         title: problem.title,
@@ -103,7 +81,7 @@ pub fn problem_read_unlock(pid: &Pid) {
 }
 
 pub async fn problem_data(pid: Pid) -> Result<ProblemData, ServerError> {
-    let problem = read_problem(&pid).await?;
+    let problem = get_problem(&pid).await?;
     let data = ProblemData {
         pid,
         files: problem.files,

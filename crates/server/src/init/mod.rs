@@ -12,7 +12,6 @@ mod embed;
 
 pub async fn init_fs(path: impl AsRef<Path>) -> eyre::Result<()> {
     let path = path.as_ref();
-    assert!(path.is_dir());
 
     #[cfg(debug_assertions)]
     {
