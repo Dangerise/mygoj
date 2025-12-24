@@ -46,7 +46,10 @@ pub fn generate<P: EmbedProblem>() -> Problem {
 
 pub async fn write_fs<P: EmbedProblem>(path: &Path) -> eyre::Result<()> {
     for filename in P::iter() {
-        let path = path.join(ApB::base().pid.0).join(&*filename);
+        let path = path
+            .join("problems")
+            .join(ApB::base().pid.0)
+            .join(&*filename);
         let content = &*P::get(&*filename).unwrap().data;
         fs::write(&path, content).await?;
     }
