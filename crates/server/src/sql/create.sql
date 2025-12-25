@@ -5,16 +5,22 @@ CREATE TABLE users(
     nickname TEXT,
     email TEXT NOT NULL UNIQUE,
     password TEXT NOT NULL,
-    json TEXT NOT NULL
+    json TEXT
 );
 -- CREATE UNIQUE INDEX idx_users_username ON users(username)
 CREATE UNIQUE INDEX idx_users_email ON users(email);
 CREATE UNIQUE INDEX idx_users_username ON users(username);
 
+CREATE TABLE tokens(
+    token TEXT PRIMARY KEY,
+    created_time INT NOT NULL,
+    uid INT NOT NULL,
+);
+
 CREATE TABLE problems(
     pid TEXT PRIMARY KEY,
     owner INT,
-    json TEXT NOT NULL
+    json TEXT
 );
 
 CREATE INDEX idx_problems_owner ON problems(owner);
@@ -25,7 +31,7 @@ CREATE TABLE records(
     uid INT NOT NULL,
     flag TEXT NOT NULL,
     time INT NOT NULL,
-    json TEXT NOT NULL
+    json TEXT
 );
 
 CREATE INDEX idx_records_pid ON records(pid);

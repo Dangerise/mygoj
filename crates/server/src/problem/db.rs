@@ -1,5 +1,5 @@
 use super::*;
-use crate::DB;
+use crate::db::DB;
 use sqlx::{FromRow, SqlitePool, sqlite::SqliteRow};
 
 impl FromRow<'_, SqliteRow> for Problem {

@@ -15,7 +15,9 @@ pub enum ServerError {
     #[error("not found ")]
     NotFound,
     #[error("the email has exist")]
-    RepeatedEmail,
+    EmailExist,
+    #[error("username exist")]
+    UsernameExist,
 }
 
 #[cfg(feature = "server")]
@@ -43,7 +45,9 @@ mod on_server {
         pub fn status_code(&self) -> StatusCode {
             use ServerError::*;
             match self {
-                UserNotFound | PasswordWrong | Fuck | RepeatedEmail => StatusCode::BAD_REQUEST,
+                UserNotFound | PasswordWrong | Fuck | EmailExist | UsernameExist => {
+                    StatusCode::BAD_REQUEST
+                }
                 LoginOutDated => StatusCode::UNAUTHORIZED,
                 Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 NotFound => StatusCode::NOT_FOUND,

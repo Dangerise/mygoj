@@ -2,7 +2,7 @@ use super::ServerError;
 use super::judge::judge_machines;
 use super::problem::get_problem_front;
 use super::record::{get_record, submit};
-use super::user::{get_user_login, register_user, remove_token, user_login};
+use super::user::{get_user_login, remove_token, user_login, user_register};
 use compact_str::CompactString;
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
@@ -73,6 +73,7 @@ pub async fn wasm(Path(path): Path<String>) -> Result<Response, StatusCode> {
     dir(format!("wasm/{path}")).await
 }
 
+#[axum::debug_handler]
 pub async fn receive_front_message(
     headers: HeaderMap,
     Json(message): Json<FrontMessage>,
@@ -130,7 +131,7 @@ pub async fn receive_front_message(
             to_json(&rid)
         }
         FrontMessage::RegisterUser(registration) => {
-            let uid = register_user(registration).await?;
+            let uid = user_register(registration).await?;
             to_json(&uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),

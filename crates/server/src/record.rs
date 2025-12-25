@@ -1,6 +1,6 @@
 use super::ServerError;
 use super::judge::JUDGE_QUEUE;
-use super::problem::{problem_read_lock, problem_read_unlock, get_problem};
+use super::problem::{get_problem, problem_read_lock, problem_read_unlock};
 use dashmap::DashMap;
 use shared::judge::SingleJudgeResult;
 use shared::record::*;

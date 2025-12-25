@@ -1,7 +1,7 @@
 use super::*;
 use axum::Router;
 use axum::http::StatusCode;
-use axum::routing::{any, get, post};
+use axum::routing::{any, get};
 use std::time::Duration;
 use tower_http::cors::CorsLayer;
 use tower_http::timeout::TimeoutLayer;
@@ -9,7 +9,7 @@ use tower_http::timeout::TimeoutLayer;
 pub async fn startup() {
     let path = storage_dir().join("data.db");
     let path = path.as_os_str().to_str().unwrap();
-    database_connect(path).await.unwrap();
+    db::database_connect(path).await.unwrap();
     tokio::spawn(judge::track_judge_machines());
 }
 
@@ -29,7 +29,7 @@ pub fn router() -> Router {
 
     let api = Router::new()
         .route("/judge", any(judge::receive_message))
-        .route("/front", post(front::receive_front_message))
+        .route("/front", any(front::receive_front_message))
         .route("/front/record_ws", any(record::ws))
         .layer(cors);
 
