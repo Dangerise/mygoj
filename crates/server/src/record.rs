@@ -47,7 +47,7 @@ pub async fn submit(uid: Uid, submission: Submission) -> Result<Rid, ServerError
     {
         let mut last_rid = LAST_RID.lock().unwrap();
         last_rid.0 += 1;
-        rid = last_rid.clone();
+        rid = *last_rid;
     }
 
     let now = chrono::Utc::now().timestamp();

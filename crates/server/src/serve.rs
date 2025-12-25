@@ -37,7 +37,5 @@ pub fn router() -> Router {
         .route("/front/record_ws", any(record::ws))
         .layer(cors);
 
-    let app = front.nest("/api", api).layer(set_id).layer(timeout);
-
-    app
+    front.nest("/api", api).layer(set_id).layer(timeout)
 }

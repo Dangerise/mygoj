@@ -56,7 +56,7 @@ async fn find_by_email(email: &CompactString) -> Result<Option<Uid>, ServerError
     if let Some(uid) = cache::find_by_email(email).await {
         return Ok(Some(uid));
     }
-    db::find_by_email(None, &email)
+    db::find_by_email(None, email)
         .await
         .map_err(ServerError::into_internal)
 }
@@ -65,7 +65,7 @@ async fn find_by_username(email: &CompactString) -> Result<Option<Uid>, ServerEr
     if let Some(uid) = cache::find_by_username(email).await {
         return Ok(Some(uid));
     }
-    db::find_by_username(None, &email)
+    db::find_by_username(None, email)
         .await
         .map_err(ServerError::into_internal)
 }

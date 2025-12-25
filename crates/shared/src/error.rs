@@ -29,11 +29,10 @@ mod on_server {
     impl IntoResponse for ServerError {
         fn into_response(self) -> Response {
             let json = serde_json::to_string_pretty(&self).unwrap();
-            let resp = Response::builder()
+            Response::builder()
                 .status(self.status_code())
                 .body(Body::new(json))
-                .unwrap();
-            resp
+                .unwrap()
         }
     }
 

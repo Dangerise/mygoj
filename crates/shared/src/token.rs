@@ -16,9 +16,7 @@ impl Token {
             return None;
         }
         let mut val = [0; TOKEN_LEN];
-        for i in 0..TOKEN_LEN {
-            val[i] = bytes[i];
-        }
+        val.copy_from_slice(&bytes);
         Some(Self(val))
     }
 

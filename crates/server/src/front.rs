@@ -140,11 +140,11 @@ pub async fn receive_front_message(
         FrontMessage::Submit(submission) => {
             let uid = logined_user.map(|x| x.uid).ok_or(ServerError::Fuck)?;
             let rid = submit(uid, submission).await?;
-            to_json(&rid)
+            to_json(rid)
         }
         FrontMessage::RegisterUser(registration) => {
             let uid = user_register(registration).await?;
-            to_json(&uid)
+            to_json(uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
         FrontMessage::LoginUser(_, _) | FrontMessage::Logout => unreachable!(),

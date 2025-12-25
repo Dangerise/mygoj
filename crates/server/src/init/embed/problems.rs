@@ -51,7 +51,7 @@ pub async fn write_fs<P: EmbedProblem>(path: &Path) -> eyre::Result<()> {
     }
     for filename in P::iter() {
         let path = dir.join(&*filename);
-        let content = &*P::get(&*filename).unwrap().data;
+        let content = &*P::get(&filename).unwrap().data;
         fs::write(&path, content).await?;
     }
     Ok(())
