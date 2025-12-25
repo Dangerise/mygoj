@@ -5,19 +5,21 @@ use crate::problem::Problem;
 use problems::ApB;
 use rust_embed::RustEmbed;
 use shared::problem::{Pid, ProblemFile, Testcase};
+use shared::user::UserRegistration;
 use uuid::Uuid;
 
-pub async fn with_db(pool: &SqlitePool) -> eyre::Result<()> {
-    // let author =  {
-    //     email: "dangerise@qq.com".into(),
-    //     password: "1234".into(),
-    //     created_time: 0,
-    //     nickname: "Dangerise".into(),
-    //     username: "Dangerise".into(),
-    //     uid: Uid(1),
-    // };
+pub async fn with_db() -> eyre::Result<()> {
+    let author = UserRegistration {
+        email: "dangerise@qq.com".into(),
+        password: "1234".into(),
+        nickname: "Dangerise".into(),
+        username: "Dangerise".into(),
+    };
 
-    problems::generate::<ApB>().insert_db(pool).await?;
+    crate::user::user_register(author).await?;
+
+    let db = DB.get().unwrap();
+    problems::generate::<ApB>().insert_db(db).await?;
 
     Ok(())
 }

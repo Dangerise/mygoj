@@ -1,11 +1,9 @@
+use crate::db::*;
 use futures_util::StreamExt;
-use sqlx::{Executor, SqlitePool};
+use sqlx::Executor;
 use std::io::{Error as IoError, ErrorKind};
 use std::path::Path;
 use tokio::fs;
-
-use crate::user::User;
-use shared::user::Uid;
 
 #[cfg(debug_assertions)]
 mod embed;
@@ -48,15 +46,16 @@ pub async fn init_db(path: impl AsRef<Path>) -> eyre::Result<()> {
     }
     fs::write(path, "").await?;
 
-    let pool = SqlitePool::connect(path).await?;
-    let mut stream = pool.execute_many(include_str!("../sql/create.sql"));
+    database_connect(path).await?;
+    let db = DB.get().unwrap();
+    let mut stream = db.execute_many(include_str!("../sql/create.sql"));
     while let Some(ret) = stream.next().await {
         let _ = ret?;
     }
 
     #[cfg(debug_assertions)]
     {
-        embed::with_db(&pool).await?;
+        embed::with_db().await?;
     }
 
     Ok(())

@@ -78,8 +78,12 @@ pub async fn receive_front_message(
     headers: HeaderMap,
     Json(message): Json<FrontMessage>,
 ) -> Result<Response, ServerError> {
-    async fn login_user(email: CompactString, pwd: CompactString) -> Result<Response, ServerError> {
-        let token = user_login(email, pwd).await?;
+    let id = headers.get("x-request-id").unwrap().to_str().unwrap();
+    tracing::trace!("new front message {id}");
+    tracing::trace_span!("front message", id = id);
+
+    async fn login_user(ident: CompactString, pwd: CompactString) -> Result<Response, ServerError> {
+        let token = user_login(ident, pwd).await?;
         let logined_user = get_user_login(token).await?;
         let resp = Json((token.encode(), logined_user)).into_response();
         Ok(resp)
@@ -91,15 +95,20 @@ pub async fn receive_front_message(
     }
     let token = headers
         .get(shared::constant::LOGIN_TOKEN)
-        .map(|v| Token::decode(v.as_bytes()).ok_or(ServerError::Fuck))
+        .map(|v| {
+            Token::decode(v.as_bytes()).ok_or_else(|| {
+                tracing::trace!("{id} deny for bad token");
+                ServerError::Fuck
+            })
+        })
         .transpose()?;
     match message {
-        FrontMessage::LoginUser(email, pwd) => {
-            return login_user(email, pwd).await;
+        FrontMessage::LoginUser(ident, pwd) => {
+            return login_user(ident, pwd).await;
         }
         FrontMessage::Logout => {
             if let Some(token) = token {
-                remove_token(token).await;
+                remove_token(token).await?;
             }
             return Ok((Json(()),).into_response());
         }
@@ -112,6 +121,9 @@ pub async fn receive_front_message(
         }
         None => None,
     };
+
+    tracing::trace!("id {id} auth {:#?}", logined_user);
+
     match message {
         FrontMessage::GetProblemFront(pid) => {
             let front = get_problem_front(&pid).await?;

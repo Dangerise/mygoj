@@ -104,7 +104,7 @@ pub async fn user_login(
 }
 
 pub async fn get_user_login(token: Token) -> Result<LoginedUser, ServerError> {
-    let uid = find_by_token(token).await?.ok_or(ServerError::Fuck)?;
+    let uid = find_by_token(token).await?.ok_or(ServerError::LoginOutDated)?;
     let user = get_user(uid).await?.unwrap();
     let logined = LoginedUser {
         uid: user.uid,
@@ -114,6 +114,8 @@ pub async fn get_user_login(token: Token) -> Result<LoginedUser, ServerError> {
     Ok(logined)
 }
 
-pub async fn remove_token(token: Token) {
-    todo!()
+pub async fn remove_token(token: Token) -> Result<(), ServerError> {
+    cache::remove_token(token).await;
+    db::remove_token(None, token).await.unwrap();
+    Ok(())
 }

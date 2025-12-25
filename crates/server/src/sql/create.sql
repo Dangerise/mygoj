@@ -13,9 +13,11 @@ CREATE UNIQUE INDEX idx_users_username ON users(username);
 
 CREATE TABLE tokens(
     token TEXT PRIMARY KEY,
-    created_time INT NOT NULL,
-    uid INT NOT NULL,
+    last_time INT NOT NULL,
+    uid INT NOT NULL
 );
+
+CREATE INDEX idx_last_time ON tokens(last_time);
 
 CREATE TABLE problems(
     pid TEXT PRIMARY KEY,

@@ -1,9 +1,10 @@
 use super::*;
 use axum::Router;
-use axum::http::StatusCode;
+use axum::http::{HeaderName, StatusCode};
 use axum::routing::{any, get};
 use std::time::Duration;
 use tower_http::cors::CorsLayer;
+use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::timeout::TimeoutLayer;
 
 pub async fn startup() {
@@ -19,6 +20,9 @@ pub fn router() -> Router {
         .route("/wasm/{*path}", get(front::wasm))
         .fallback(front::index);
 
+    let x_request_id = HeaderName::from_static("x-request-id");
+    let set_id = SetRequestIdLayer::new(x_request_id, MakeRequestUuid);
+
     let cors = CorsLayer::new()
         .allow_origin(tower_http::cors::Any)
         .allow_methods(tower_http::cors::Any)
@@ -33,7 +37,7 @@ pub fn router() -> Router {
         .route("/front/record_ws", any(record::ws))
         .layer(cors);
 
-    let app = front.nest("/api", api).layer(timeout);
+    let app = front.nest("/api", api).layer(set_id).layer(timeout);
 
     app
 }

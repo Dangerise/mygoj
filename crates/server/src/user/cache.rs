@@ -13,16 +13,20 @@ static EMAILS: Cache<CompactString, Uid> = Cache::new(LIMIT);
 static USERNAMES: Cache<CompactString, Uid> = Cache::new(LIMIT);
 
 #[dynamic]
-static TOKENS: Cache<Token, Uid> = Cache::new(LIMIT);
+static TOKENS: Cache<Token, Option<Uid>> = Cache::new(LIMIT);
 
 pub async fn update_user(uid: Uid, user: User) {
-    EMAILS.insert(user.email.clone(), uid);
-    USERNAMES.insert(user.username.clone(), uid);
+    EMAILS.insert(user.email.clone(), uid).await;
+    USERNAMES.insert(user.username.clone(), uid).await;
     USERS.insert(uid, user).await;
 }
 
 pub async fn add_token(token: Token, uid: Uid) {
-    TOKENS.insert(token, uid).await
+    TOKENS.insert(token, Some(uid)).await
+}
+
+pub async fn remove_token(token: Token) {
+    TOKENS.insert(token, None).await
 }
 
 pub async fn get_user(uid: Uid) -> Option<User> {
@@ -38,5 +42,5 @@ pub async fn find_by_username(username: &CompactString) -> Option<Uid> {
 }
 
 pub async fn find_by_token(token: Token) -> Option<Uid> {
-    TOKENS.get(&token).await
+    TOKENS.get(&token).await.flatten()
 }
