@@ -10,21 +10,31 @@ impl FromRow<'_, SqliteRow> for Problem {
 
 impl Problem {
     pub async fn insert_db(&self, pool: &SqlitePool) -> Result<(), sqlx::Error> {
-        sqlx::query("INSERT INTO problems (pid,owner,json) VALUES ($1,$2,$3)")
-            .bind(self.pid.0.as_str())
-            .bind(self.owner.map(|x| x.0 as i64))
-            .bind(serde_json::to_string(self).unwrap())
-            .execute(pool)
-            .await?;
+        let pid = self.pid.0.as_str();
+        let owner = self.owner.map(|x| x.0 as i64);
+        let json = serde_json::to_string(self).unwrap();
+        sqlx::query!(
+            "INSERT INTO problems (pid,owner,json) VALUES ($1,$2,$3)",
+            pid,
+            owner,
+            json
+        )
+        .execute(pool)
+        .await?;
         Ok(())
     }
 }
 
 pub async fn get_problem(pid: &Pid) -> Result<Problem, sqlx::Error> {
     tracing::trace!("DB fetch problem {pid}");
-    let ret = sqlx::query_as("SELECT (json) FROM problems WHERE pid=$1")
-        .bind(pid.0.as_str())
+    let pid = pid.0.as_str();
+    let json = sqlx::query!("SELECT (json) FROM problems WHERE pid=$1", pid)
         .fetch_one(DB.get().unwrap())
-        .await?;
-    Ok(ret)
+        .await?
+        .json
+        .unwrap();
+
+    let p = serde_json::from_str(&json).unwrap();
+
+    Ok(p)
 }
