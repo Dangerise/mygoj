@@ -16,12 +16,17 @@ pub async fn update_record(rid: Rid, record: &Record) -> Result<(), sqlx::Error>
     assert!(record.status.done());
     let json = serde_json::to_string(record).unwrap();
     let rid = rid.0 as i64;
-    sqlx::query!("UPDATE records SET json=$1 WHERE rid=$2", json, rid)
-        .execute(db)
-        .await?;
+    let flag = record.status.flag().as_str();
+    sqlx::query!(
+        "UPDATE records SET json=$1,flag=$2 WHERE rid=$3",
+        json,
+        flag,
+        rid
+    )
+    .execute(db)
+    .await?;
     Ok(())
 }
-
 
 pub async fn submit(uid: Uid, Submission { code, pid }: Submission) -> Result<Record, sqlx::Error> {
     let db = DB.get().unwrap();
