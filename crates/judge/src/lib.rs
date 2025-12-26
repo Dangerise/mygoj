@@ -21,6 +21,7 @@ async fn send_message<T>(msg: JudgeMessage) -> eyre::Result<T>
 where
     T: DeserializeOwned,
 {
+    tracing::trace!("send message {msg:#?}");
     let res = Client::new()
         .get(format!("{}/api/judge", SERVER_ORIGN))
         .json(&msg)
@@ -82,9 +83,12 @@ async fn connect() {
 }
 
 pub async fn main() -> eyre::Result<()> {
-    tracing_subscriber::fmt().init();
+    tracing_subscriber::fmt()
+        .with_env_filter("judge=trace")
+        .init();
 
-    DIR.set(dirs::home_dir().unwrap().join("mygoj_judge")).unwrap();
+    DIR.set(dirs::home_dir().unwrap().join("mygoj_judge"))
+        .unwrap();
 
     let dir = DIR.get().unwrap();
     if !dir.exists() {

@@ -13,6 +13,21 @@ pub static JUDGE_QUEUE: Mutex<VecDeque<Rid>> = Mutex::new(VecDeque::new());
 #[dynamic]
 static SIGNALS: Mutex<HashMap<Uuid, JudgeMachineSignal>> = Mutex::new(HashMap::new());
 
+pub async fn init_queue() -> eyre::Result<()> {
+    let db = crate::db::DB.get().unwrap();
+    let waiting_flag = RecordFlag::Waiting.as_str();
+    let ret = sqlx::query!("SELECT rid,json FROM records WHERE flag=$1", waiting_flag)
+        .fetch_all(db)
+        .await?;
+    for rec in ret {
+        let json = rec.json.unwrap();
+        let rid = Rid(rec.rid.unwrap() as u64);
+        let rec = serde_json::from_str(&json).unwrap();
+        new_record(rid, rec).await?;
+    }
+    Ok(())
+}
+
 pub async fn track_judge_machines() {
     let mut to_remove = Vec::new();
     loop {
@@ -44,7 +59,7 @@ async fn generate_command() -> Result<JudgeCommand, ServerError> {
 }
 
 use super::problem::{problem_data, send_problem_file};
-use super::record::{get_record, update_record, update_record_single};
+use super::record::{get_record, new_record, update_record, update_record_single};
 use axum::Json;
 use axum::body::Body;
 use axum::response::Response;

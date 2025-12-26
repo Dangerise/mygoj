@@ -11,6 +11,7 @@ pub async fn startup() {
     let path = storage_dir().join("data.db");
     let path = path.as_os_str().to_str().unwrap();
     db::database_connect(path).await.unwrap();
+    judge::init_queue().await.unwrap();
     tokio::spawn(judge::track_judge_machines());
 }
 

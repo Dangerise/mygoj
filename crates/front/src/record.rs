@@ -128,10 +128,7 @@ mod inner {
                 return;
             };
             tracing::info!("udpate record {t:#?}");
-            let stop = matches!(
-                t.status,
-                RecordStatus::Completed(_) | RecordStatus::CompileError(_)
-            );
+            let stop = t.status.done();
             record.set(Some(t));
             if stop {
                 return;
