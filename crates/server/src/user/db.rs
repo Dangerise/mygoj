@@ -116,55 +116,53 @@ pub async fn register(
         username,
     }: UserRegistration,
 ) -> Result<User, Either<sqlx::Error, ServerError>> {
-    let created_time = chrono::Utc::now().timestamp();
-    let db = db::DB.get().unwrap();
-    let mut txn = db
-        .begin_with("BEGIN IMMEDIATE")
-        .await
-        .map_err(Either::Left)?;
-    let ret = async {
-        if find_by_email(&mut *txn, &email).await?.is_some(){
-            return Ok(Err(ServerError::EmailExist));
-        }
-        if find_by_username(&mut *txn,&username).await?.is_some(){
-            return Ok(Err(ServerError::UsernameExist));
-        }
-        let res= {
-            let (email,username,password,nickname)=(email.as_str(),username.as_str(),password.as_str(),nickname.as_str());
-            sqlx::query!(
-                "INSERT INTO users (email,username,password,nickname,created_time) VALUES ($1,$2,$3,$4,$5)",
-                email,username,password,nickname,created_time).execute(&mut *txn).await?
-        };
-        let uid = res.last_insert_rowid() as u64;
-        let user = User {
-            email,
-            password,
-            nickname,
-            username,
-            created_time,
-            uid: Uid(uid),
-        };
-        {
-            let user=serde_json::to_string(&user).unwrap();
-            let uid=uid as i64;
-            sqlx::query!("UPDATE users SET json=$1 WHERE uid=$2",user,uid).execute(&mut *txn).await?;
-        }
-        Ok(Ok(user))
-    }.await;
-    match ret {
-        Ok(ret) => match ret {
-            Ok(ret) => {
-                txn.commit().await.map_err(Either::Left)?;
-                Ok(ret)
+    db::transaction(|txn| {
+        Box::pin(async move {
+            let created_time = chrono::Utc::now().timestamp();
+            if find_by_email(&mut **txn, &email)
+                .await
+                .map_err(Either::Left)?
+                .is_some()
+            {
+                return Err(Either::Right(ServerError::EmailExist));
             }
-            Err(err) => {
-                txn.rollback().await.map_err(Either::Left)?;
-                Err(Either::Right(err))
+            if find_by_username(&mut **txn, &username)
+                .await
+                .map_err(Either::Left)?
+                .is_some()
+            {
+                return Err(Either::Right(ServerError::UsernameExist));
             }
-        },
-        Err(err) => {
-            txn.rollback().await.map_err(Either::Left)?;
-            Err(Either::Left(err))
-        }
-    }
+            let res = {
+                let (email, username, password, nickname) = (
+                    email.as_str(),
+                    username.as_str(),
+                    password.as_str(),
+                    nickname.as_str(),
+                );
+                sqlx::query!(
+                    "INSERT INTO users (email,username,password,nickname,created_time) VALUES ($1,$2,$3,$4,$5)",
+                    email,username,password,nickname,created_time).execute(&mut **txn).await.map_err(Either::Left)?
+            };
+            let uid = res.last_insert_rowid() as u64;
+            let user = User {
+                email,
+                password,
+                nickname,
+                username,
+                created_time,
+                privilege: Privilege::default(),
+                uid: Uid(uid),
+            };
+            {
+                let user = serde_json::to_string(&user).unwrap();
+                let uid = uid as i64;
+                sqlx::query!("UPDATE users SET json=$1 WHERE uid=$2", user, uid)
+                    .execute(&mut **txn)
+                    .await
+                    .map_err(Either::Left)?;
+            }
+            Ok(user)
+        })
+    }).await
 }
