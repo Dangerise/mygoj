@@ -1,9 +1,72 @@
 use super::*;
-use shared::problem::ProblemEditable;
+use shared::problem::*;
+use std::collections::BTreeSet;
 use utility::loading_page;
 
+#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+enum FileState {
+    Unchanged,
+    Changed,
+    Deleted,
+    New,
+}
+
+#[derive(Debug, Clone, PartialEq)]
+struct EditingProblemFile {
+    file: ProblemFile,
+    state: FileState,
+}
+
 #[component]
-pub fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element {
+fn render_files_view(mut files: Signal<Option<Vec<EditingProblemFile>>>) -> Element {
+    let at = use_signal(String::new);
+    let mut show_files = files
+        .read()
+        .as_ref()
+        .unwrap()
+        .iter()
+        .filter_map(|d| {
+            d.file
+                .path
+                .strip_prefix(&*at.read())
+                .filter(|x| !x.contains("/"))
+                .map(|x| (x.to_string(), d.clone()))
+        })
+        .collect::<Vec<_>>();
+    show_files.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
+    let show_folders = files
+        .read()
+        .as_ref()
+        .unwrap()
+        .iter()
+        .filter_map(|x| {
+            x.file
+                .path
+                .strip_prefix(&*at.read())
+                .filter(|x| x.contains("/"))
+                .and_then(|x| x.split("/").next())
+                .map(str::to_string)
+        })
+        .collect::<BTreeSet<_>>();
+    rsx! {
+        for folder in show_folders {
+            p { "<folder> {folder}" }
+        }
+        for (name , file) in show_files {
+            p { "<file> {name}" }
+        }
+    }
+}
+
+#[component]
+fn render_files_edit(mut files: Signal<Option<Vec<EditingProblemFile>>>) -> Element {
+    rsx! {
+        render_files_view { files }
+    }
+}
+
+#[component]
+fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element {
     let mut time_limit = use_signal(|| editable.read().as_ref().unwrap().time_limit.to_string());
     let mut time_limit_error = use_signal(String::new);
     let mut memory_limit =
@@ -57,7 +120,6 @@ pub fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element
                 rsx! {
                     label { "{msg}" }
                 }
-
             } else {
                 rsx! {}
             }
@@ -75,7 +137,6 @@ pub fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element
                 rsx! {
                     label { "{msg}" }
                 }
-
             } else {
                 rsx! {}
             }
@@ -94,16 +155,35 @@ pub fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element
 pub fn ProblemEdit(pid: Pid) -> Element {
     let mut fetched = use_signal(|| false);
     let mut editable = use_signal(|| None);
+    let mut files = use_signal(|| None);
     {
         let pid = pid.clone();
         use_future(move || {
             let pid = pid.clone();
             async move {
-                let editable_val: ProblemEditable =
-                    send_message(FrontMessage::GetProblemEditable(pid))
-                        .await
-                        .unwrap();
-                editable.set(editable_val.into());
+                let editable = async {
+                    let editable_val: ProblemEditable =
+                        send_message(FrontMessage::GetProblemEditable(pid.clone()))
+                            .await
+                            .unwrap();
+                    editable.set(editable_val.into());
+                };
+                let files = async {
+                    let files_val: Vec<ProblemFile> =
+                        send_message(FrontMessage::GetProblemFiles(pid.clone()))
+                            .await
+                            .unwrap();
+                    files.set(Some(
+                        files_val
+                            .into_iter()
+                            .map(|file| EditingProblemFile {
+                                file,
+                                state: FileState::Unchanged,
+                            })
+                            .collect::<Vec<_>>(),
+                    ));
+                };
+                futures_util::join!(editable, files);
                 fetched.set(true);
             }
         })
@@ -119,9 +199,8 @@ pub fn ProblemEdit(pid: Pid) -> Element {
         {
             if fetched.cloned() {
                 rsx! {
-
-            
                     render_editable { editable }
+                    render_files_edit { files }
                     button { onclick: move |_| {}, "save" }
                 }
             } else {

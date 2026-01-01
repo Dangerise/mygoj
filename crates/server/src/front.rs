@@ -1,6 +1,6 @@
 use super::ServerError;
 use super::judge::judge_machines;
-use super::problem::{get_problem_editable, get_problem_front};
+use super::problem::{get_problem, get_problem_editable, get_problem_front};
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
 use compact_str::CompactString;
@@ -125,6 +125,16 @@ pub async fn receive_front_message(
     tracing::trace!("id {id} auth {:#?}", logined_user);
 
     match message {
+        FrontMessage::GetProblemFiles(pid) => {
+            let Some(user) = logined_user else {
+                return Err(ServerError::Fuck);
+            };
+            if !user.privilege.edit_problems {
+                return Err(ServerError::Fuck);
+            }
+            let files = get_problem(&pid).await.map(|x| x.files)?;
+            to_json(&files)
+        }
         FrontMessage::GetProblemEditable(pid) => {
             let Some(user) = logined_user else {
                 return Err(ServerError::Fuck);

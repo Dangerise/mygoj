@@ -5,6 +5,7 @@ use compact_str::CompactString;
 pub enum FrontMessage {
     GetProblemEditable(Pid),
     GetProblemFront(Pid),
+    GetProblemFiles(Pid),
     GetRecord(Rid),
     Submit(Submission),
     LoginUser(CompactString, CompactString),
