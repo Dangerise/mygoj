@@ -39,6 +39,7 @@ pub fn generate<P: EmbedProblem>() -> Problem {
         base.files.push(ProblemFile {
             path: file.into(),
             uuid: Uuid::new_v4(),
+            is_public: false,
         });
     }
     base

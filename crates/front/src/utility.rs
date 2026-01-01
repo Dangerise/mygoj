@@ -87,3 +87,8 @@ pub async fn init_login_state() {
     tracing::info!("login user {logined_user:#?}");
     *LOGIN_STATE.write() = logined_user;
 }
+
+#[component]
+pub fn loading_page() -> Element {
+    rsx! { "Loading" }
+}

@@ -8,10 +8,12 @@ pub struct Pid(pub CompactString);
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProblemFront {
     pub pid: Pid,
+    pub owner: Option<Uid>,
     pub title: String,
     pub statement: String,
     pub time_limit: u32,
     pub memory_limit: u32,
+    pub public_files: Vec<CompactString>,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -24,6 +26,7 @@ pub struct Testcase {
 pub struct ProblemFile {
     pub path: CompactString,
     pub uuid: Uuid,
+    pub is_public: bool,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
@@ -32,6 +35,15 @@ pub struct ProblemData {
     pub testcases: Vec<Testcase>,
     #[serde(default)]
     pub files: Vec<ProblemFile>,
+    pub time_limit: u32,
+    pub memory_limit: u32,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ProblemEditable {
+    pub owner: Option<Uid>,
+    pub title: String,
+    pub statement: String,
     pub time_limit: u32,
     pub memory_limit: u32,
 }

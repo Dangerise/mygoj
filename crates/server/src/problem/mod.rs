@@ -40,6 +40,17 @@ pub async fn get_problem(pid: &Pid) -> Result<Problem, ServerError> {
     Ok(ret)
 }
 
+pub async fn get_problem_editable(pid: &Pid) -> Result<ProblemEditable, ServerError> {
+    let problem = get_problem_front(pid).await?;
+    Ok(ProblemEditable {
+        owner: problem.owner,
+        time_limit: problem.time_limit,
+        memory_limit: problem.memory_limit,
+        statement: problem.statement,
+        title: problem.title,
+    })
+}
+
 pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
     let problem = get_problem(pid).await?;
 
@@ -48,6 +59,13 @@ pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
         statement: problem.statement,
         time_limit: problem.time_limit,
         memory_limit: problem.memory_limit,
+        owner: problem.owner,
+        public_files: problem
+            .files
+            .into_iter()
+            .filter(|f| f.is_public)
+            .map(|f| f.path)
+            .collect(),
         pid: pid.clone(),
     };
 

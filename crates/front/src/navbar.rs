@@ -19,6 +19,7 @@ pub fn Navbar() -> Element {
                 }
             }
         }
+        hr {}
         Outlet::<Route> {
         }
     }

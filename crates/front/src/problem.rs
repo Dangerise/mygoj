@@ -24,6 +24,7 @@ fn render_problem(front: ProblemFront) -> Element {
         statement,
         time_limit,
         memory_limit,
+        ..
     } = front;
     rsx! {
         h1 { "{pid} {title}" }

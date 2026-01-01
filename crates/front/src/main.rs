@@ -9,6 +9,7 @@ use shared::record::Rid;
 use shared::user::LoginedUser;
 use std::sync::LazyLock;
 
+mod components;
 mod error;
 mod home;
 mod judge_status;
@@ -19,16 +20,16 @@ mod md;
 mod navbar;
 mod notfound;
 mod problem;
+mod problem_edit;
 mod record;
 mod register;
 mod submit;
 mod utility;
-mod components;
 
+use components::*;
 use error::{ErrorKind, Split as _};
 use md::Markdown;
 use utility::*;
-use components::*;
 
 static LOGIN_STATE: GlobalSignal<Option<LoginedUser>> = GlobalSignal::new(|| None);
 static SERVER_URL: LazyLock<String> = LazyLock::new(|| {
@@ -65,6 +66,8 @@ enum Route {
     NotFound {},
     #[route("/logout")]
     Logout {},
+    #[route("/problem/:pid/edit")]
+    ProblemEdit { pid: Pid },
 }
 
 use home::Home;
@@ -75,6 +78,7 @@ use logout::Logout;
 use navbar::Navbar;
 use notfound::NotFound;
 use problem::Problem;
+use problem_edit::ProblemEdit;
 use record::Record;
 use register::UserRegister;
 use submit::Submit;

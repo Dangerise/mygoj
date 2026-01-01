@@ -3,6 +3,7 @@ use compact_str::CompactString;
 
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Hash)]
 pub enum FrontMessage {
+    GetProblemEditable(Pid),
     GetProblemFront(Pid),
     GetRecord(Rid),
     Submit(Submission),
