@@ -84,5 +84,6 @@ pub async fn init_login_state() {
             None
         }
     };
+    tracing::info!("login user {logined_user:#?}");
     *LOGIN_STATE.write() = logined_user;
 }

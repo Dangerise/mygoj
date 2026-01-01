@@ -16,7 +16,8 @@ pub async fn with_db() -> eyre::Result<()> {
         username: "Dangerise".into(),
     };
 
-    crate::user::user_register(author).await?;
+    let uid = crate::user::user_register(author).await?;
+    crate::user::set_su(uid).await?;
 
     let db = DB.get().unwrap();
     problems::generate::<ApB>().insert_db(db).await?;

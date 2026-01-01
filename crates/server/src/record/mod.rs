@@ -18,8 +18,6 @@ use axum::extract::{
 };
 use axum::response::Response;
 
-const LIMIT: u64 = 1 << 15;
-
 struct RecordChannel {
     tx: broadcast::Sender<RecordMessage>,
     _rx: broadcast::Receiver<RecordMessage>,

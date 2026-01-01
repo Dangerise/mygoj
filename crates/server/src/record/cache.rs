@@ -1,18 +1,17 @@
 use super::*;
-
-use moka::future::Cache;
+use papaya::HashMap;
 
 #[dynamic]
-pub static RECORDS: Cache<Rid, Record> = Cache::new(LIMIT);
+pub static RECORDS: HashMap<Rid, Record> = HashMap::new();
 
 pub async fn new_record(record: Record) {
-    RECORDS.insert(record.rid, record).await
+    RECORDS.pin().insert(record.rid, record);
 }
 
 pub async fn get_record(rid: Rid) -> Option<Record> {
-    RECORDS.get(&rid).await
+    RECORDS.pin().get(&rid).cloned()
 }
 
 pub async fn update_record(rid: Rid, record: Record) {
-    RECORDS.insert(rid, record).await;
+    RECORDS.pin().insert(rid, record);
 }

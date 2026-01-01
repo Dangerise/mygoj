@@ -17,6 +17,7 @@ pub struct User {
     pub username: CompactString,
     pub password: CompactString,
     pub nickname: CompactString,
+    pub privilege: Privilege,
     pub created_time: i64,
 }
 
@@ -27,6 +28,28 @@ async fn get_user(uid: Uid) -> Result<Option<User>, ServerError> {
     db::get_user(None, uid)
         .await
         .map_err(ServerError::into_internal)
+}
+
+async fn update_user<F>(uid: Uid, callback: F) -> Result<(), ServerError>
+where
+    F: FnOnce(&mut User) -> Result<(), ServerError> + Send + Sync + 'static,
+{
+    crate::db::transaction(|txn| {
+        Box::pin(async move {
+            let mut user = db::get_user(&mut **txn, uid)
+                .await
+                .map_err(Either::Left)?
+                .ok_or(Either::Right(ServerError::NotFound))?;
+            callback(&mut user).map_err(Either::Right)?;
+            db::set_user(&mut **txn, uid, &user)
+                .await
+                .map_err(Either::Left)?;
+            cache::set_user(uid, user).await;
+            Ok(())
+        })
+    })
+    .await
+    .map_err(|e| e.map_left(ServerError::into_internal).either_into())
 }
 
 pub async fn user_register(reg: UserRegistration) -> Result<Uid, ServerError> {
@@ -44,10 +67,9 @@ pub async fn user_register(reg: UserRegistration) -> Result<Uid, ServerError> {
         .await
         .map_err(|err| err.map_left(ServerError::into_internal).either_into())?;
 
-    // let user: User = todo!();
     let uid = user.uid;
 
-    cache::update_user(uid, user).await;
+    cache::set_user(uid, user).await;
 
     Ok(uid)
 }
@@ -104,14 +126,27 @@ pub async fn user_login(
 }
 
 pub async fn get_user_login(token: Token) -> Result<LoginedUser, ServerError> {
-    let uid = find_by_token(token).await?.ok_or(ServerError::LoginOutDated)?;
+    let uid = find_by_token(token)
+        .await?
+        .ok_or(ServerError::LoginOutDated)?;
     let user = get_user(uid).await?.unwrap();
+    if !user.privilege.enter_site {
+        return Err(ServerError::NoPrivilege);
+    }
     let logined = LoginedUser {
         uid: user.uid,
         nickname: user.nickname,
         email: user.email,
+        privilege: user.privilege,
     };
     Ok(logined)
+}
+
+pub async fn set_su(uid: Uid) -> Result<(), ServerError> {
+    update_user(uid, |user| {
+        user.privilege = Privilege::ALL;
+        Ok(())
+    }).await
 }
 
 pub async fn remove_token(token: Token) -> Result<(), ServerError> {

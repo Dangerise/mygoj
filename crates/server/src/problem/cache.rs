@@ -1,13 +1,13 @@
 use super::*;
-use moka::future::Cache;
+use papaya::HashMap;
 
 #[dynamic]
-static PROBLEMS: Cache<Pid, Problem> = Cache::new(1 << 10);
+static PROBLEMS: HashMap<Pid, Problem> = HashMap::new();
 
 pub async fn get_problem(pid: &Pid) -> Option<Problem> {
-    PROBLEMS.get(pid).await
+    PROBLEMS.pin().get(pid).cloned()
 }
 
 pub async fn update_problem(pid: &Pid, prob: Problem) {
-    PROBLEMS.insert(pid.clone(), prob).await;
+    PROBLEMS.pin().insert(pid.clone(), prob);
 }

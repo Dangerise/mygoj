@@ -56,6 +56,34 @@ pub async fn get_user(
     }
 }
 
+pub async fn set_user(
+    con: impl Into<Option<&mut SqliteConnection>>,
+    uid: Uid,
+    user: &User,
+) -> Result<(), sqlx::Error> {
+    let uid = uid.0 as i64;
+    let email = user.email.as_str();
+    let nickname = user.nickname.as_str();
+    let pwd = user.password.as_str();
+    let username = user.username.as_str();
+    let json = serde_json::to_string(user).unwrap();
+    let qry = sqlx::query!(
+        "UPDATE users SET email=$1,nickname=$2,password=$3,username=$4,json=$5 WHERE uid=$6",
+        email,
+        nickname,
+        pwd,
+        username,
+        json,
+        uid
+    );
+    if let Some(con) = con.into() {
+        qry.execute(con).await?;
+    } else {
+        qry.execute(db::DB.get().unwrap()).await?;
+    }
+    Ok(())
+}
+
 pub async fn find_by_email(
     con: impl Into<Option<&mut SqliteConnection>>,
     email: &str,

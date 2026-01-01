@@ -18,6 +18,8 @@ pub enum ServerError {
     EmailExist,
     #[error("username exist")]
     UsernameExist,
+    #[error("no privilege")]
+    NoPrivilege,
 }
 
 #[cfg(feature = "server")]
@@ -47,6 +49,7 @@ mod on_server {
                 UserNotFound | PasswordWrong | Fuck | EmailExist | UsernameExist => {
                     StatusCode::BAD_REQUEST
                 }
+                NoPrivilege => StatusCode::FORBIDDEN,
                 LoginOutDated => StatusCode::UNAUTHORIZED,
                 Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 NotFound => StatusCode::NOT_FOUND,

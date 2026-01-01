@@ -1,46 +1,48 @@
 use super::*;
-use moka::future::Cache;
-
-const LIMIT: u64 = 1 << 15;
+use papaya::HashMap;
 
 #[dynamic]
-static USERS: Cache<Uid, User> = Cache::new(LIMIT);
+static USERS: HashMap<Uid, User> = HashMap::new();
 
 #[dynamic]
-static EMAILS: Cache<CompactString, Uid> = Cache::new(LIMIT);
+static EMAILS: HashMap<CompactString, Uid> = HashMap::new();
 
 #[dynamic]
-static USERNAMES: Cache<CompactString, Uid> = Cache::new(LIMIT);
+static USERNAMES: HashMap<CompactString, Uid> = HashMap::new();
 
 #[dynamic]
-static TOKENS: Cache<Token, Option<Uid>> = Cache::new(LIMIT);
+static TOKENS: HashMap<Token, Option<Uid>> = HashMap::new();
 
-pub async fn update_user(uid: Uid, user: User) {
-    EMAILS.insert(user.email.clone(), uid).await;
-    USERNAMES.insert(user.username.clone(), uid).await;
-    USERS.insert(uid, user).await;
+pub async fn set_user(uid: Uid, user: User) {
+    EMAILS.pin().insert(user.email.clone(), uid);
+    USERNAMES.pin().insert(user.username.clone(), uid);
+    USERS.pin().update(uid, |old| {
+        EMAILS.pin().remove(&old.email);
+        USERNAMES.pin().remove(&old.username);
+        user.clone()
+    });
 }
 
 pub async fn add_token(token: Token, uid: Uid) {
-    TOKENS.insert(token, Some(uid)).await
+    TOKENS.pin().insert(token, Some(uid));
 }
 
 pub async fn remove_token(token: Token) {
-    TOKENS.insert(token, None).await
+    TOKENS.pin().insert(token, None);
 }
 
 pub async fn get_user(uid: Uid) -> Option<User> {
-    USERS.get(&uid).await
+    USERS.pin().get(&uid).cloned()
 }
 
 pub async fn find_by_email(email: &CompactString) -> Option<Uid> {
-    EMAILS.get(email).await
+    EMAILS.pin().get(email).cloned()
 }
 
 pub async fn find_by_username(username: &CompactString) -> Option<Uid> {
-    USERNAMES.get(username).await
+    USERNAMES.pin().get(username).cloned()
 }
 
 pub async fn find_by_token(token: Token) -> Option<Uid> {
-    TOKENS.get(&token).await.flatten()
+    TOKENS.pin().get(&token).map(|x| *x).flatten()
 }
