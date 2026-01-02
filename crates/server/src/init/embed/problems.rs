@@ -1,6 +1,25 @@
 use super::*;
 
 #[derive(RustEmbed)]
+#[folder = "src/init/embed/complex_fs"]
+pub struct ComplexFs;
+
+impl EmbedProblem for ComplexFs {
+    fn base() -> Problem {
+        Problem {
+            pid: Pid::new("2"),
+            owner: None,
+            title: "complex_fs".into(),
+            statement: "none statment".into(),
+            memory_limit: 2,
+            time_limit: 100,
+            testcases: vec![],
+            files: vec![],
+        }
+    }
+}
+
+#[derive(RustEmbed)]
 #[folder = "src/init/embed/a+b"]
 pub struct ApB;
 
@@ -52,6 +71,9 @@ pub async fn write_fs<P: EmbedProblem>(path: &Path) -> eyre::Result<()> {
     }
     for filename in P::iter() {
         let path = dir.join(&*filename);
+        if let Some(parent) = path.parent() {
+            fs::create_dir_all(parent).await?;
+        }
         let content = &*P::get(&filename).unwrap().data;
         fs::write(&path, content).await?;
     }

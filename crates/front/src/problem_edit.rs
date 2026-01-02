@@ -11,6 +11,29 @@ enum FileState {
     New,
 }
 
+#[derive(Debug, PartialEq, Clone)]
+enum Event {
+    Update,
+}
+
+impl FileState {
+    fn as_str(&self) -> &'static str {
+        use FileState::*;
+        match self {
+            New => "New",
+            Changed => "Changed",
+            Deleted => "Deleted",
+            Unchanged => "Unchanged",
+        }
+    }
+}
+
+impl std::fmt::Display for FileState {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.as_str())
+    }
+}
+
 #[derive(Debug, Clone, PartialEq)]
 struct EditingProblemFile {
     file: ProblemFile,
@@ -18,8 +41,24 @@ struct EditingProblemFile {
 }
 
 #[component]
-fn render_files_view(mut files: Signal<Option<Vec<EditingProblemFile>>>) -> Element {
-    let at = use_signal(String::new);
+fn render_file_state(state: FileState) -> Element {
+    rsx! {
+        label { "{state}" }
+    }
+}
+
+#[component]
+fn upload_file(default_path: String) -> Element {
+    rsx! {}
+}
+
+#[component]
+fn render_files_view(
+    mut files: Signal<Option<Vec<EditingProblemFile>>>,
+    mut events: Signal<Vec<Event>>,
+) -> Element {
+    let mut at = use_signal(String::new);
+    tracing::info!("at {at}");
     let mut show_files = files
         .read()
         .as_ref()
@@ -49,19 +88,50 @@ fn render_files_view(mut files: Signal<Option<Vec<EditingProblemFile>>>) -> Elem
         })
         .collect::<BTreeSet<_>>();
     rsx! {
+        if !at.is_empty() {
+            p {
+                a {
+                    onclick: move |_| {
+                        let mut at = at.write();
+                        at.pop().unwrap();
+                        let parent = at.strip_suffix(at.rsplit("/").next().unwrap()).unwrap();
+                        *at = parent.into();
+                    },
+                    ".."
+                }
+            }
+        }
         for folder in show_folders {
-            p { "<folder> {folder}" }
+            p {
+                a {
+                    onclick: move |_| {
+                        let mut at=at.write();
+                        at.push_str(&folder);
+                        at.push('/');
+                    },
+                    "/{folder}"
+                }
+            }
         }
         for (name , file) in show_files {
-            p { "<file> {name}" }
+            p {
+                a { "{name}" }
+                render_file_state { state: file.state }
+                button { "pub" }
+                button { "upd" }
+                button { "rm" }
+            }
         }
     }
 }
 
 #[component]
-fn render_files_edit(mut files: Signal<Option<Vec<EditingProblemFile>>>) -> Element {
+fn render_files_edit(
+    mut files: Signal<Option<Vec<EditingProblemFile>>>,
+    mut events: Signal<Vec<Event>>,
+) -> Element {
     rsx! {
-        render_files_view { files }
+        render_files_view { files, events }
     }
 }
 
@@ -156,6 +226,7 @@ pub fn ProblemEdit(pid: Pid) -> Element {
     let mut fetched = use_signal(|| false);
     let mut editable = use_signal(|| None);
     let mut files = use_signal(|| None);
+    let events = use_signal(Vec::new);
     {
         let pid = pid.clone();
         use_future(move || {
@@ -200,7 +271,8 @@ pub fn ProblemEdit(pid: Pid) -> Element {
             if fetched.cloned() {
                 rsx! {
                     render_editable { editable }
-                    render_files_edit { files }
+                    render_files_edit { files, events }
+                    hr {}
                     button { onclick: move |_| {}, "save" }
                 }
             } else {

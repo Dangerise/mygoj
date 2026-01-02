@@ -21,11 +21,15 @@ pub async fn with_db() -> eyre::Result<()> {
 
     let db = DB.get().unwrap();
     problems::generate::<ApB>().insert_db(db).await?;
+    problems::generate::<problems::ComplexFs>()
+        .insert_db(db)
+        .await?;
 
     Ok(())
 }
 
 pub async fn with_fs(path: &Path) -> eyre::Result<()> {
     problems::write_fs::<problems::ApB>(path).await?;
+    problems::write_fs::<problems::ComplexFs>(path).await?;
     Ok(())
 }
