@@ -11,6 +11,7 @@ dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version 
 eyre.workspace = true
 futures-util.workspace = true
 getrandom = { workspace = true, features = ["wasm_js"] }
+itertools.workspace=true
 markdown = "1.0.0"
 pharos = "0.5.3"
 pulldown-cmark = "0.13.0"

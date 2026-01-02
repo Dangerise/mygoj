@@ -1,7 +1,9 @@
 use super::*;
+use itertools::Itertools;
 use shared::problem::*;
 use std::collections::BTreeSet;
 use utility::loading_page;
+use uuid::Uuid;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum FileState {
@@ -12,8 +14,22 @@ enum FileState {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum Event {
-    Update,
+enum EventKind {
+    Update(Uuid, Vec<u8>),
+    ChangeVisibiliy,
+    Delete,
+}
+
+#[derive(Debug, PartialEq, Clone)]
+struct Event {
+    on: String,
+    kind: EventKind,
+}
+
+impl std::fmt::Display for Event {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{} {:?}", &self.on, self.kind)
+    }
 }
 
 impl FileState {
@@ -41,6 +57,16 @@ struct EditingProblemFile {
 }
 
 #[component]
+fn render_events(events: Signal<Vec<Event>>) -> Element {
+    let events = events.read();
+    rsx! {
+        for evt in &*events {
+            p { "{evt}" }
+        }
+    }
+}
+
+#[component]
 fn render_file_state(state: FileState) -> Element {
     rsx! {
         label { "{state}" }
@@ -57,6 +83,57 @@ fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut events: Signal<Vec<Event>>,
 ) -> Element {
+    let mut change_visibility = move |file: &str| {
+        let mut events = events.write();
+        for idx in 0..events.len() {
+            let evt = &events[idx];
+            if evt.on == file && matches!(evt.kind, EventKind::ChangeVisibiliy) {
+                events.remove(idx);
+                return;
+            }
+        }
+        events.push(Event {
+            on: file.into(),
+            kind: EventKind::ChangeVisibiliy,
+        });
+    };
+    let is_visibility_changed = |file: &str| {
+        events
+            .read()
+            .iter()
+            .any(|x| x.on == file && x.kind == EventKind::ChangeVisibiliy)
+    };
+    let is_content_changed = |file: &str| {
+        events
+            .read()
+            .iter()
+            .any(|x| x.on == file && matches!(x.kind, EventKind::Update(_, _)))
+    };
+    let is_removed = move |file: &str| {
+        events
+            .read()
+            .iter()
+            .any(|x| x.on == file && matches!(x.kind, EventKind::Delete))
+    };
+    let mut remove = move |file: &str| {
+        assert!(!is_removed(file));
+        events.write().push(Event {
+            on: file.into(),
+            kind: EventKind::Delete,
+        });
+    };
+    let mut recover = move |file: &str| {
+        assert!(is_removed(file));
+        let mut events = events.write();
+        let idx = events
+            .iter()
+            .enumerate()
+            .filter_map(|(i, x)| matches!(x.kind, EventKind::Delete).then_some(i))
+            .next()
+            .unwrap();
+        events.remove(idx);
+    };
+
     let mut at = use_signal(String::new);
     tracing::info!("at {at}");
     let mut show_files = files
@@ -70,6 +147,20 @@ fn render_files_view(
                 .strip_prefix(&*at.read())
                 .filter(|x| !x.contains("/"))
                 .map(|x| (x.to_string(), d.clone()))
+        })
+        .update(|(_, d)| {
+            if is_removed(&d.file.path) {
+                d.state = FileState::Deleted;
+            } else {
+                if matches!(d.state, FileState::Unchanged | FileState::Changed) {
+                    d.state =
+                        if is_visibility_changed(&d.file.path) || is_content_changed(&d.file.path) {
+                            FileState::Changed
+                        } else {
+                            FileState::Unchanged
+                        }
+                }
+            }
         })
         .collect::<Vec<_>>();
     show_files.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
@@ -105,7 +196,7 @@ fn render_files_view(
             p {
                 a {
                     onclick: move |_| {
-                        let mut at=at.write();
+                        let mut at = at.write();
                         at.push_str(&folder);
                         at.push('/');
                     },
@@ -117,9 +208,40 @@ fn render_files_view(
             p {
                 a { "{name}" }
                 render_file_state { state: file.state }
-                button { "pub" }
-                button { "upd" }
-                button { "rm" }
+                {
+                    let visibiliy = file.file.is_public ^ is_visibility_changed(&file.file.path);
+                    let text = if visibiliy { "pub" } else { "priv" };
+                    let path = file.file.path.clone();
+                    if is_removed(&path) {
+                        rsx! {
+                            button {
+                                onclick: move |_| {
+                                    recover(&path);
+                                },
+                                "bk"
+                            }
+                        }
+                    } else {
+                        let p2=path.clone();
+                        rsx! {
+                            button {
+                                onclick: move |_| {
+                                    change_visibility(&path);
+                                },
+                                "{text} "
+                            }
+                            button { "upd " }
+                            button {
+                                onclick: {
+                                    move |_| {
+                                        remove(&p2);
+                                    }
+                                },
+                                "rm"
+                            }
+                        }
+                    }
+                }
             }
         }
     }
@@ -272,6 +394,8 @@ pub fn ProblemEdit(pid: Pid) -> Element {
                 rsx! {
                     render_editable { editable }
                     render_files_edit { files, events }
+                    hr {}
+                    render_events { events }
                     hr {}
                     button { onclick: move |_| {}, "save" }
                 }
