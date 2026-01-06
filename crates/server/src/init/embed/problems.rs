@@ -55,9 +55,13 @@ pub fn generate<P: EmbedProblem>() -> Problem {
     let mut base = P::base();
     for file in P::iter() {
         let file = &*file;
+        let inner = P::get(file).unwrap();
+        let size = inner.data.len() as u64;
         base.files.push(ProblemFile {
             path: file.into(),
             uuid: Uuid::new_v4(),
+            last_modified: inner.metadata.last_modified().unwrap() as i64,
+            size,
             is_public: false,
         });
     }

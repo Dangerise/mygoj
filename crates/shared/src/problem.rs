@@ -27,6 +27,8 @@ pub struct ProblemFile {
     pub path: CompactString,
     pub uuid: Uuid,
     pub is_public: bool,
+    pub size: u64,
+    pub last_modified: i64,
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
