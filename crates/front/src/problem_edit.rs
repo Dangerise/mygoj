@@ -1,24 +1,33 @@
 use super::*;
+use compact_str::CompactString;
 use itertools::Itertools;
 use shared::problem::*;
 use std::collections::BTreeSet;
 use utility::loading_page;
 use uuid::Uuid;
 
+#[derive(Debug, Clone, PartialEq)]
+struct UploadedFile {
+    path: CompactString,
+    uuid: Uuid,
+    content: Vec<u8>,
+}
+
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 enum FileState {
     Unchanged,
     Changed,
-    Deleted,
+    Removed,
     New,
 }
 
 #[derive(Debug, PartialEq, Clone)]
 enum EventKind {
-    Update(Uuid, Vec<u8>),
-    New(Uuid, Vec<u8>),
-    ChangeVisibiliy,
-    Delete,
+    Update(UploadedFile),
+    New(UploadedFile),
+    SetPub(CompactString),
+    SetPriv(CompactString),
+    Remove(CompactString),
 }
 
 #[derive(Debug, PartialEq, Clone)]
@@ -39,7 +48,7 @@ impl FileState {
         match self {
             New => "New",
             Changed => "Changed",
-            Deleted => "Deleted",
+            Removed => "Deleted",
             Unchanged => "Unchanged",
         }
     }
@@ -72,13 +81,6 @@ fn render_file_state(state: FileState) -> Element {
     rsx! {
         label { "{state}" }
     }
-}
-
-#[derive(Debug, Clone, PartialEq)]
-struct UploadedFile {
-    path: String,
-    uuid: Uuid,
-    content: Vec<u8>,
 }
 
 #[component]
@@ -128,57 +130,6 @@ fn render_files_view(
     let mut replace_path = use_signal(String::new);
     let mut uploaded = use_signal(|| None);
 
-    let mut change_visibility = move |file: &str| {
-        let mut events = events.write();
-        for idx in 0..events.len() {
-            let evt = &events[idx];
-            if evt.on == file && matches!(evt.kind, EventKind::ChangeVisibiliy) {
-                events.remove(idx);
-                return;
-            }
-        }
-        events.push(Event {
-            on: file.into(),
-            kind: EventKind::ChangeVisibiliy,
-        });
-    };
-    let is_visibility_changed = |file: &str| {
-        events
-            .read()
-            .iter()
-            .any(|x| x.on == file && x.kind == EventKind::ChangeVisibiliy)
-    };
-    let is_content_changed = |file: &str| {
-        events
-            .read()
-            .iter()
-            .any(|x| x.on == file && matches!(x.kind, EventKind::Update(_, _)))
-    };
-    let is_removed = move |file: &str| {
-        events
-            .read()
-            .iter()
-            .any(|x| x.on == file && matches!(x.kind, EventKind::Delete))
-    };
-    let mut remove = move |file: &str| {
-        assert!(!is_removed(file));
-        events.write().push(Event {
-            on: file.into(),
-            kind: EventKind::Delete,
-        });
-    };
-    let mut recover = move |file: &str| {
-        assert!(is_removed(file));
-        let mut events = events.write();
-        let idx = events
-            .iter()
-            .enumerate()
-            .filter_map(|(i, x)| matches!(x.kind, EventKind::Delete).then_some(i))
-            .next()
-            .unwrap();
-        events.remove(idx);
-    };
-
     let mut at = use_signal(String::new);
     tracing::info!("at {at}");
     let mut show_files = files
@@ -192,20 +143,6 @@ fn render_files_view(
                 .strip_prefix(&*at.read())
                 .filter(|x| !x.contains("/"))
                 .map(|x| (x.to_string(), d.clone()))
-        })
-        .update(|(_, d)| {
-            if is_removed(&d.file.path) {
-                d.state = FileState::Deleted;
-            } else {
-                if matches!(d.state, FileState::Unchanged | FileState::Changed) {
-                    d.state =
-                        if is_visibility_changed(&d.file.path) || is_content_changed(&d.file.path) {
-                            FileState::Changed
-                        } else {
-                            FileState::Unchanged
-                        }
-                }
-            }
         })
         .collect::<Vec<_>>();
     show_files.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
@@ -254,48 +191,6 @@ fn render_files_view(
             p {
                 a { "{name}" }
                 render_file_state { state: file.state }
-                {
-                    let visibiliy = file.file.is_public ^ is_visibility_changed(&file.file.path);
-                    let text = if visibiliy { "pub" } else { "priv" };
-                    let path = file.file.path.clone();
-                    if is_removed(&path) {
-                        rsx! {
-                            button {
-                                onclick: move |_| {
-                                    recover(&path);
-                                },
-                                "bk"
-                            }
-                        }
-                    } else {
-                        let p2 = path.clone();
-                        let p3 = path.clone();
-                        rsx! {
-                            button {
-                                onclick: move |_| {
-                                    change_visibility(&path);
-                                },
-                                "{text} "
-                            }
-                            button {
-                                onclick: move |_| {
-                                    show_upload.set(true);
-                                    replace_path.set(p3.to_string());
-                                    uploaded.set(None);
-                                },
-                                "upd "
-                            }
-                            button {
-                                onclick: {
-                                    move |_| {
-                                        remove(&p2);
-                                    }
-                                },
-                                "rm"
-                            }
-                        }
-                    }
-                }
             }
         }
     }

@@ -24,6 +24,7 @@ uuid = { workspace = true, features = ["js"] }
 wasm-bindgen-futures = "0.4.56"
 web-sys = { version = "0.3.83", features = ["Storage", "Window","Navigator","Clipboard"] }
 ws_stream_wasm = "0.7.5"
+compact_str.workspace=true
 
 [features]
 independent = []
