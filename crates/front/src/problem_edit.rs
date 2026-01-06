@@ -2,7 +2,7 @@ use super::*;
 use compact_str::CompactString;
 use itertools::Itertools;
 use shared::problem::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use utility::loading_page;
 use uuid::Uuid;
 
@@ -64,6 +64,7 @@ impl std::fmt::Display for FileState {
 struct EditingProblemFile {
     file: ProblemFile,
     state: FileState,
+    is_selected: bool,
 }
 
 #[component]
@@ -126,26 +127,82 @@ fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut events: Signal<Vec<Event>>,
 ) -> Element {
+    tracing::info!("{files:#?}");
+
+    fn walk(
+        mut files: Signal<Option<Vec<EditingProblemFile>>>,
+        folder: &str,
+        f: impl Fn(&mut EditingProblemFile),
+    ) {
+        files
+            .write()
+            .as_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|d| d.file.path.strip_prefix(folder).is_some())
+            .for_each(f);
+    }
+
     let mut show_upload = use_signal(|| false);
     let mut replace_path = use_signal(String::new);
     let mut uploaded = use_signal(|| None);
 
     let mut at = use_signal(String::new);
+
+    let folder_path = {
+        move |folder: &str| {
+            if folder.is_empty() {
+                format!("{at}")
+            } else {
+                format!("{at}{folder}/")
+            }
+        }
+    };
+
+    let file_directly_in_folder = |file: &str, folder: &str| -> Option<CompactString> {
+        file.strip_prefix(&folder_path(folder))
+            .filter(|s| !s.contains("/"))
+            .map(CompactString::from)
+    };
+
+    let file_in_folder =
+        move |file: &str, folder: &str| -> bool { file.strip_prefix(&folder_path(folder)).is_some() };
+
+    let mut select_folder = move |folder: &str, is_selected: bool| {
+        files
+            .write()
+            .as_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|d| file_in_folder(&d.file.path, folder))
+            .for_each(|d| d.is_selected = is_selected);
+    };
+
+    let mut select_file = move |file: &str, is_selected| {
+        files
+            .write()
+            .as_mut()
+            .unwrap()
+            .iter_mut()
+            .filter(|d| d.file.path == file)
+            .for_each(|d| d.is_selected = is_selected);
+    };
+
     tracing::info!("at {at}");
     let mut show_files = files
         .read()
         .as_ref()
         .unwrap()
         .iter()
-        .filter_map(|d| {
-            d.file
-                .path
-                .strip_prefix(&*at.read())
-                .filter(|x| !x.contains("/"))
-                .map(|x| (x.to_string(), d.clone()))
-        })
+        .filter_map(|d| file_directly_in_folder(&d.file.path, "").map(|x| (x, d.clone())))
         .collect::<Vec<_>>();
     show_files.sort_unstable_by(|(a, _), (b, _)| a.cmp(b));
+
+    #[derive(Debug)]
+    struct Folder {
+        is_selected: bool,
+    }
+
     let show_folders = files
         .read()
         .as_ref()
@@ -157,9 +214,27 @@ fn render_files_view(
                 .strip_prefix(&*at.read())
                 .filter(|x| x.contains("/"))
                 .and_then(|x| x.split("/").next())
-                .map(str::to_string)
+                .map(CompactString::from)
         })
-        .collect::<BTreeSet<_>>();
+        .collect::<BTreeSet<_>>()
+        .into_iter()
+        .map(|s| {
+            let meta = Folder {
+                is_selected: files
+                    .read()
+                    .as_ref()
+                    .unwrap()
+                    .iter()
+                    .filter(|d| file_in_folder(&d.file.path, &s))
+                    .update(|d| tracing::info!("{} in {}", &d.file.path, folder_path(&s)))
+                    .all(|d| d.is_selected),
+            };
+            (s, meta)
+        })
+        .collect::<BTreeMap<_, _>>();
+
+    tracing::info!("folders {show_folders:#?}");
+
     rsx! {
         upload_single_file { show: show_upload, replace_path, uploaded }
         if !at.is_empty() {
@@ -175,8 +250,21 @@ fn render_files_view(
                 }
             }
         }
-        for folder in show_folders {
+        for (folder , meta) in show_folders {
             p {
+                input {
+                    r#type: "checkbox",
+                    checked: meta.is_selected,
+                    onchange: {
+                        {
+                            let folder=folder.clone();
+                            move |evt| {
+                                let folder = folder.clone();
+                                select_folder(&folder,evt.checked());
+                            }
+                        }
+                    },
+                }
                 a {
                     onclick: move |_| {
                         let mut at = at.write();
@@ -189,6 +277,16 @@ fn render_files_view(
         }
         for (name , file) in show_files {
             p {
+                input {
+                    r#type: "checkbox",
+                    checked: file.is_selected,
+                    onchange: {
+                        move |evt| {
+                            let path = file.file.path.clone();
+                            select_file(&path, evt.checked());
+                        }
+                    },
+                }
                 a { "{name}" }
                 render_file_state { state: file.state }
             }
@@ -203,6 +301,8 @@ fn render_files_edit(
 ) -> Element {
     rsx! {
         render_files_view { files, events }
+        hr {}
+        render_events { events }
     }
 }
 
@@ -321,6 +421,7 @@ pub fn ProblemEdit(pid: Pid) -> Element {
                             .map(|file| EditingProblemFile {
                                 file,
                                 state: FileState::Unchanged,
+                                is_selected: false,
                             })
                             .collect::<Vec<_>>(),
                     ));
@@ -342,9 +443,8 @@ pub fn ProblemEdit(pid: Pid) -> Element {
             if fetched.cloned() {
                 rsx! {
                     render_editable { editable }
-                    render_files_edit { files, events }
                     hr {}
-                    render_events { events }
+                    render_files_edit { files, events }
                     hr {}
                     button { onclick: move |_| {}, "save" }
                 }
