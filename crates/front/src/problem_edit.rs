@@ -16,6 +16,7 @@ enum FileState {
 #[derive(Debug, PartialEq, Clone)]
 enum EventKind {
     Update(Uuid, Vec<u8>),
+    New(Uuid, Vec<u8>),
     ChangeVisibiliy,
     Delete,
 }
@@ -73,9 +74,49 @@ fn render_file_state(state: FileState) -> Element {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+struct UploadedFile {
+    path: String,
+    uuid: Uuid,
+    content: Vec<u8>,
+}
+
 #[component]
-fn upload_file(default_path: String) -> Element {
-    rsx! {}
+fn upload_single_file(
+    show: Signal<bool>,
+    replace_path: String,
+    uploaded: Signal<Option<UploadedFile>>,
+) -> Element {
+    let mut os_path = use_signal(String::new);
+    let mut msg = use_signal(|| None);
+    rsx! {
+        DialogRoot { open: show.cloned(),
+            DialogContent {
+                DialogTitle { "upload file" }
+                DialogDescription { "upload a file to replace {replace_path}" }
+                label { "choose a file" }
+                p { "{os_path}" }
+                input {
+                    id: "file-input",
+                    r#type: "file",
+                    onchange: move |evt| {
+                        let files = evt.files();
+                        if files.len() == 1 {
+                            os_path.set(files[0].name());
+                            msg.set(None);
+                        } else {
+                            os_path.set(String::new());
+                            msg.set(Some("you can only select one file"));
+                        }
+                    },
+                }
+                if let Some(msg) = &*msg.read() {
+                    label { "{msg}" }
+                }
+                button { onclick: move |_| {}, "confirm" }
+            }
+        }
+    }
 }
 
 #[component]
@@ -83,6 +124,10 @@ fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut events: Signal<Vec<Event>>,
 ) -> Element {
+    let mut show_upload = use_signal(|| false);
+    let mut replace_path = use_signal(String::new);
+    let mut uploaded = use_signal(|| None);
+
     let mut change_visibility = move |file: &str| {
         let mut events = events.write();
         for idx in 0..events.len() {
@@ -179,6 +224,7 @@ fn render_files_view(
         })
         .collect::<BTreeSet<_>>();
     rsx! {
+        upload_single_file { show: show_upload, replace_path, uploaded }
         if !at.is_empty() {
             p {
                 a {
@@ -222,7 +268,8 @@ fn render_files_view(
                             }
                         }
                     } else {
-                        let p2=path.clone();
+                        let p2 = path.clone();
+                        let p3 = path.clone();
                         rsx! {
                             button {
                                 onclick: move |_| {
@@ -230,7 +277,14 @@ fn render_files_view(
                                 },
                                 "{text} "
                             }
-                            button { "upd " }
+                            button {
+                                onclick: move |_| {
+                                    show_upload.set(true);
+                                    replace_path.set(p3.to_string());
+                                    uploaded.set(None);
+                                },
+                                "upd "
+                            }
                             button {
                                 onclick: {
                                     move |_| {
