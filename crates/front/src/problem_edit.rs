@@ -1,5 +1,6 @@
 use super::*;
 use compact_str::CompactString;
+use dioxus::html::FileData;
 use shared::problem::*;
 use utility::loading_page;
 use uuid::Uuid;
@@ -79,31 +80,26 @@ fn render_file_state(state: FileState) -> Element {
 }
 
 #[component]
-fn upload_files(
-    show: Signal<bool>,
-    uploaded: Signal<Vec<UploadedFile>>,
-) -> Element {
-    let mut os_path = use_signal(String::new);
-    let mut msg = use_signal(|| None);
+fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Element {
+    let mut selected: Signal<Vec<FileData>> = use_signal(Vec::new);
     rsx! {
         DialogRoot { open: show.cloned(),
             DialogContent {
                 DialogTitle { "upload file" }
                 DialogDescription { "upload files" }
-                label { "choose a file" }
-                p { "{os_path}" }
+                label { "choose some files" }
                 input {
                     id: "file-input",
                     r#type: "file",
-                    multiple:true,
+                    multiple: true,
                     onchange: move |evt| {
                         let files = evt.files();
                         tracing::info!("get files {files:#?}");
-                        msg.set(Some("()".to_string()));
+                        selected.set(files);
                     },
                 }
-                if let Some(msg) = &*msg.read() {
-                    label { "{msg}" }
+                {
+                    selected.iter().map(|f| f.name()).map(|f| rsx!{p { "{f}" }})
                 }
                 button {
                     onclick: move |_| {
