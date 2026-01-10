@@ -121,6 +121,10 @@ fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut evt_groups: Signal<Vec<EventGroup>>,
 ) -> Element {
+    let mut add_group = move |evts: Vec<_>| {
+        evt_groups.push(EventGroup { evts });
+    };
+
     tracing::info!("{files:#?}");
 
     let mut show_upload = use_signal(|| false);
@@ -188,6 +192,8 @@ fn render_files_view(
                             input { r#type: "checkbox", checked: file.is_selected }
                             a { {file.file.path.as_str()} }
                             {"    "}
+                            {if file.file.is_public { "pub" } else { "priv" }}
+                            {"    "}
                             render_file_state { state: file.state }
                         }
                     }
@@ -195,21 +201,60 @@ fn render_files_view(
             }
             button {
                 onclick: move |_| {
-                    let group = files
-
-                        .as_mut()
-                        .unwrap()
-                        .iter_mut()
-                        .filter(|d| d.is_selected && d.state != FileState::Removed)
-                        .map(|d| {
-                            d.state = FileState::Removed;
-                            Event::Remove(d.file.path.clone())
-                        })
-                        .collect();
-                    let group = EventGroup { evts: group };
-                    evt_groups.push(group);
+                    add_group(
+                        files
+                            .as_mut()
+                            .unwrap()
+                            .iter_mut()
+                            .filter(|d| d.is_selected && d.state != FileState::Removed)
+                            .map(|d| {
+                                d.state = FileState::Removed;
+                                Event::Remove(d.file.path.clone())
+                            })
+                            .collect(),
+                    );
                 },
                 "remove"
+            }
+            button {
+                onclick: move |_| {
+                    add_group(
+                        files
+                            .as_mut()
+                            .unwrap()
+                            .iter_mut()
+                            .filter(|d| {
+                                d.is_selected && d.state != FileState::Removed && !d.file.is_public
+                            })
+                            .map(|d| {
+                                d.state = FileState::Changed;
+                                d.file.is_public = true;
+                                Event::SetPub(d.file.path.clone())
+                            })
+                            .collect(),
+                    );
+                },
+                "set pub"
+            }
+            button {
+                onclick: move |_| {
+                    add_group(
+                        files
+                            .as_mut()
+                            .unwrap()
+                            .iter_mut()
+                            .filter(|d| {
+                                d.is_selected && d.state != FileState::Removed && d.file.is_public
+                            })
+                            .map(|d| {
+                                d.state = FileState::Changed;
+                                d.file.is_public = false;
+                                Event::SetPriv(d.file.path.clone())
+                            })
+                            .collect(),
+                    );
+                },
+                "set priv"
             }
         }
 
