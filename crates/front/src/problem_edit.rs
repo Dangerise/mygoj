@@ -1,8 +1,6 @@
 use super::*;
 use compact_str::CompactString;
-use itertools::Itertools;
 use shared::problem::*;
-use std::collections::{BTreeMap, BTreeSet};
 use utility::loading_page;
 use uuid::Uuid;
 
@@ -121,9 +119,6 @@ fn upload_single_file(
         }
     }
 }
-
-use std::cell::RefCell;
-use std::rc::Rc;
 
 #[component]
 fn render_files_view(
