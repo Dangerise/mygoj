@@ -136,19 +136,25 @@ fn render_files_view(
     let mut replace_path = use_signal(String::new);
     let mut uploaded = use_signal(|| None);
 
-    let mut files = files
+    // files.as_mut();
+
+    if !files
         .as_ref()
         .unwrap()
         .iter()
-        .map(|x| Rc::new(RefCell::new(x.clone())))
-        .collect::<Vec<_>>();
-    files.sort_unstable_by(|a, b| a.borrow().file.path.cmp(&b.borrow().file.path));
+        .is_sorted_by(|a, b| a.file.path < b.file.path)
+    {
+        files
+            .as_mut()
+            .unwrap()
+            .sort_unstable_by(|a, b| a.file.path.cmp(&b.file.path));
+    }
 
     let mut shift_button = use_signal(|| false);
 
     rsx! {
         div {
-            tabindex:0,
+            tabindex: 0,
             onkeydown: move |evt| {
                 if evt.code() == Code::ShiftLeft {
                     shift_button.set(true);
@@ -161,16 +167,20 @@ fn render_files_view(
                     tracing::info!("shift down");
                 }
             },
+            button {
+                onclick: move |_| {
+                    files.as_mut().unwrap().iter_mut().for_each(|x| x.is_selected = false);
+                },
+                "clear selection"
+            }
             upload_single_file { show: show_upload, replace_path, uploaded }
-            for (idx , file_down) in files.iter().map(Clone::clone).enumerate() {
+            for (idx , file) in files.as_ref().unwrap().iter().enumerate() {
                 {
-                    let file = file_down.borrow();
                     rsx! {
                         p {
                             onclick: {
-                                let file = file_down.clone();
                                 move |_| {
-                                    file.borrow_mut().is_selected ^= true;
+                                    files.as_mut().unwrap()[idx].is_selected ^= true;
                                 }
                             },
                             input { r#type: "checkbox", checked: file.is_selected }
