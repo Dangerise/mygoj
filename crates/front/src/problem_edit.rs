@@ -131,8 +131,6 @@ fn render_files_view(
     let mut replace_path = use_signal(String::new);
     let mut uploaded = use_signal(|| None);
 
-    // files.as_mut();
-
     if !files
         .as_ref()
         .unwrap()
