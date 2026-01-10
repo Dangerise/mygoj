@@ -129,20 +129,6 @@ fn render_files_view(
 ) -> Element {
     tracing::info!("{files:#?}");
 
-    fn walk(
-        mut files: Signal<Option<Vec<EditingProblemFile>>>,
-        folder: &str,
-        f: impl Fn(&mut EditingProblemFile),
-    ) {
-        files
-            .write()
-            .as_mut()
-            .unwrap()
-            .iter_mut()
-            .filter(|d| d.file.path.strip_prefix(folder).is_some())
-            .for_each(f);
-    }
-
     let mut show_upload = use_signal(|| false);
     let mut replace_path = use_signal(String::new);
     let mut uploaded = use_signal(|| None);
