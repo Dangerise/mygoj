@@ -20,7 +20,7 @@ enum FileState {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum EventKind {
+enum Event {
     Update(UploadedFile),
     New(UploadedFile),
     SetPub(CompactString),
@@ -29,15 +29,8 @@ enum EventKind {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-struct Event {
-    on: String,
-    kind: EventKind,
-}
-
-impl std::fmt::Display for Event {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{} {:?}", &self.on, self.kind)
-    }
+struct EventGroup {
+    evts: Vec<Event>,
 }
 
 impl FileState {
@@ -46,7 +39,7 @@ impl FileState {
         match self {
             New => "New",
             Changed => "Changed",
-            Removed => "Deleted",
+            Removed => "Removed",
             Unchanged => "Unchanged",
         }
     }
@@ -66,11 +59,14 @@ struct EditingProblemFile {
 }
 
 #[component]
-fn render_events(events: Signal<Vec<Event>>) -> Element {
-    let events = events.read();
+fn render_events(evt_groups: Signal<Vec<EventGroup>>) -> Element {
+    let groups = evt_groups.read();
     rsx! {
-        for evt in &*events {
-            p { "{evt}" }
+        for g in &*groups {
+            for e in &g.evts {
+                {format!("{e:#?}")}
+            }
+            hr {}
         }
     }
 }
@@ -123,7 +119,7 @@ fn upload_single_file(
 #[component]
 fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
-    mut events: Signal<Vec<Event>>,
+    mut evt_groups: Signal<Vec<EventGroup>>,
 ) -> Element {
     tracing::info!("{files:#?}");
 
@@ -146,7 +142,7 @@ fn render_files_view(
     }
 
     let mut shift_button = use_signal(|| false);
-    let mut last_selection=use_signal(|| None);
+    let mut last_selection = use_signal(|| None);
 
     rsx! {
         div {
@@ -197,6 +193,24 @@ fn render_files_view(
                     }
                 }
             }
+            button {
+                onclick: move |_| {
+                    let group = files
+
+                        .as_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .filter(|d| d.is_selected && d.state != FileState::Removed)
+                        .map(|d| {
+                            d.state = FileState::Removed;
+                            Event::Remove(d.file.path.clone())
+                        })
+                        .collect();
+                    let group = EventGroup { evts: group };
+                    evt_groups.push(group);
+                },
+                "remove"
+            }
         }
 
     }
@@ -205,12 +219,12 @@ fn render_files_view(
 #[component]
 fn render_files_edit(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
-    mut events: Signal<Vec<Event>>,
+    mut evt_groups: Signal<Vec<EventGroup>>,
 ) -> Element {
     rsx! {
-        render_files_view { files, events }
+        render_files_view { files, evt_groups }
         hr {}
-        render_events { events }
+        render_events { evt_groups }
     }
 }
 
@@ -305,7 +319,7 @@ pub fn ProblemEdit(pid: Pid) -> Element {
     let mut fetched = use_signal(|| false);
     let mut editable = use_signal(|| None);
     let mut files = use_signal(|| None);
-    let events = use_signal(Vec::new);
+    let evt_groups = use_signal(Vec::new);
     {
         let pid = pid.clone();
         use_future(move || {
@@ -352,7 +366,7 @@ pub fn ProblemEdit(pid: Pid) -> Element {
                 rsx! {
                     render_editable { editable }
                     hr {}
-                    render_files_edit { files, events }
+                    render_files_edit { files, evt_groups }
                     hr {}
                     button { onclick: move |_| {}, "save" }
                 }
