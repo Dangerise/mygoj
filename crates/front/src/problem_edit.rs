@@ -1,15 +1,21 @@
 use super::*;
+use bytes::Bytes;
 use compact_str::CompactString;
 use dioxus::html::FileData;
 use shared::problem::*;
 use utility::loading_page;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Clone, PartialEq)]
 struct UploadedFile {
     path: CompactString,
-    uuid: Uuid,
-    content: Vec<u8>,
+    content: Bytes,
+}
+
+impl std::fmt::Debug for UploadedFile {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.path)
+    }
 }
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
@@ -82,6 +88,7 @@ fn render_file_state(state: FileState) -> Element {
 #[component]
 fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Element {
     let mut selected: Signal<Vec<FileData>> = use_signal(Vec::new);
+    let mut err = use_signal(String::new);
     rsx! {
         DialogRoot { open: show.cloned(),
             DialogContent {
@@ -98,12 +105,32 @@ fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Elem
                         selected.set(files);
                     },
                 }
-                {
-                    selected.iter().map(|f| f.name()).map(|f| rsx!{p { "{f}" }})
-                }
+                {selected.iter().map(|f| f.name()).map(|f| rsx! {
+                    p { "{f}" }
+                })}
                 button {
                     onclick: move |_| {
-                        show.set(false);
+                        spawn(async move {
+                            let selected = selected.read();
+                            let files = selected.iter().map(|f| f.read_bytes());
+                            let files = futures_util::future::join_all(files).await;
+                            let mut uploaded = uploaded.write();
+                            for (meta, content) in selected.iter().zip(files) {
+                                let content = match content {
+                                    Ok(v) => v,
+                                    Err(e) => {
+                                        err.set(format!("{e:#?}"));
+                                        return;
+                                    }
+                                };
+                                uploaded
+                                    .push(UploadedFile {
+                                        path: meta.name().into(),
+                                        content,
+                                    });
+                            }
+                            show.set(false);
+                        });
                     },
                     "confirm"
                 }
@@ -124,7 +151,36 @@ fn render_files_view(
     tracing::info!("{files:#?}");
 
     let mut show_upload = use_signal(|| false);
-    let mut uploaded = use_signal(Vec::new);
+    let mut uploaded = use_signal(Vec::<UploadedFile>::new);
+
+    if !show_upload.cloned() && !uploaded.is_empty() {
+        let uploaded = uploaded.replace(Vec::new());
+        let mut files = files.as_mut().unwrap();
+        let mut group=Vec::with_capacity(uploaded.len());
+        for new_file in uploaded {
+            let time = web_sys::js_sys::Date::now();
+            let file = ProblemFile {
+                path: new_file.path.clone(),
+                uuid: Uuid::new_v4(),
+                is_public: false,
+                size: new_file.content.len() as u64,
+                last_modified: time as i64,
+            };
+            let Some(old) = files.iter_mut().filter(|d| d.file.path == file.path).next() else {
+                files.push(EditingProblemFile {
+                    file,
+                    state: FileState::New,
+                    is_selected: false,
+                });
+                group.push(Event::New(new_file));
+                continue;
+            };
+            old.state = FileState::Changed;
+            old.file = file;
+            group.push(Event::Update(new_file));
+        }
+        add_group(group);
+    }
 
     if !files
         .as_ref()
