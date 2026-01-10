@@ -79,10 +79,9 @@ fn render_file_state(state: FileState) -> Element {
 }
 
 #[component]
-fn upload_single_file(
+fn upload_files(
     show: Signal<bool>,
-    replace_path: String,
-    uploaded: Signal<Option<UploadedFile>>,
+    uploaded: Signal<Vec<UploadedFile>>,
 ) -> Element {
     let mut os_path = use_signal(String::new);
     let mut msg = use_signal(|| None);
@@ -90,27 +89,28 @@ fn upload_single_file(
         DialogRoot { open: show.cloned(),
             DialogContent {
                 DialogTitle { "upload file" }
-                DialogDescription { "upload a file to replace {replace_path}" }
+                DialogDescription { "upload files" }
                 label { "choose a file" }
                 p { "{os_path}" }
                 input {
                     id: "file-input",
                     r#type: "file",
+                    multiple:true,
                     onchange: move |evt| {
                         let files = evt.files();
-                        if files.len() == 1 {
-                            os_path.set(files[0].name());
-                            msg.set(None);
-                        } else {
-                            os_path.set(String::new());
-                            msg.set(Some("you can only select one file"));
-                        }
+                        tracing::info!("get files {files:#?}");
+                        msg.set(Some("()".to_string()));
                     },
                 }
                 if let Some(msg) = &*msg.read() {
                     label { "{msg}" }
                 }
-                button { onclick: move |_| {}, "confirm" }
+                button {
+                    onclick: move |_| {
+                        show.set(false);
+                    },
+                    "confirm"
+                }
             }
         }
     }
@@ -128,8 +128,7 @@ fn render_files_view(
     tracing::info!("{files:#?}");
 
     let mut show_upload = use_signal(|| false);
-    let mut replace_path = use_signal(String::new);
-    let mut uploaded = use_signal(|| None);
+    let mut uploaded = use_signal(Vec::new);
 
     if !files
         .as_ref()
@@ -168,7 +167,7 @@ fn render_files_view(
                 },
                 "clear selection"
             }
-            upload_single_file { show: show_upload, replace_path, uploaded }
+            upload_files { show: show_upload, uploaded }
             for (idx , file) in files.as_ref().unwrap().iter().enumerate() {
                 {
                     rsx! {
@@ -253,6 +252,12 @@ fn render_files_view(
                     );
                 },
                 "set priv"
+            }
+            button {
+                onclick: move |_| {
+                    show_upload.set(true);
+                },
+                "upload"
             }
         }
 
