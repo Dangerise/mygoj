@@ -151,12 +151,14 @@ fn render_files_view(
     }
 
     let mut shift_button = use_signal(|| false);
+    let mut last_selection=use_signal(|| None);
 
     rsx! {
         div {
             tabindex: 0,
             onkeydown: move |evt| {
                 if evt.code() == Code::ShiftLeft {
+                    evt.prevent_default();
                     shift_button.set(true);
                     tracing::info!("shift on");
                 }
@@ -180,11 +182,22 @@ fn render_files_view(
                         p {
                             onclick: {
                                 move |_| {
-                                    files.as_mut().unwrap()[idx].is_selected ^= true;
+                                    if let Some(last) = last_selection.cloned() && shift_button.cloned() {
+                                        let (left, right) = if last < idx { (last, idx) } else { (idx, last) };
+                                        let mut files = files.as_mut().unwrap();
+                                        for idx in left..=right {
+                                            files[idx].is_selected = true;
+                                        }
+                                    } else {
+                                        files.as_mut().unwrap()[idx].is_selected ^= true;
+                                    }
+                                    last_selection.set(Some(idx));
                                 }
                             },
                             input { r#type: "checkbox", checked: file.is_selected }
                             a { {file.file.path.as_str()} }
+                            {"    "}
+                            render_file_state { state: file.state }
                         }
                     }
                 }
