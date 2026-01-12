@@ -143,6 +143,22 @@ fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Elem
 }
 
 #[component]
+fn render_time_diff(diff: u64) -> Element {
+    let text = time_diff(diff);
+    rsx! {
+        label { "{text}" }
+    }
+}
+
+#[component]
+fn render_size(size: u64) -> Element {
+    let text = human_bytes::human_bytes(size as f64);
+    rsx! {
+        label { "{text}" }
+    }
+}
+
+#[component]
 fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut evt_groups: Signal<Vec<EventGroup>>,
@@ -206,7 +222,7 @@ fn render_files_view(
 
     let mut shift_button = use_signal(|| false);
     let mut last_selection = use_signal(|| None);
-
+    let now = (web_sys::js_sys::Date::now() / 1000.) as i64;
     rsx! {
         div {
             tabindex: 0,
@@ -232,6 +248,14 @@ fn render_files_view(
             upload_files { show: show_upload, uploaded }
             for (idx , file) in files.as_ref().unwrap().iter().enumerate() {
                 {
+                    assert!(
+                        file.last_modified <= now,
+                        "{} last_modified {} now {}",
+                        file.path,
+                        file.last_modified,
+                        now,
+                    );
+                    let time_diff = (now - file.last_modified) as u64;
                     rsx! {
                         p {
                             onclick: {
@@ -250,6 +274,10 @@ fn render_files_view(
                             },
                             input { r#type: "checkbox", checked: file.is_selected }
                             a { {file.path.as_str()} }
+                            {"    "}
+                            render_size { size: file.size }
+                            {"    "}
+                            render_time_diff { diff: time_diff }
                             {"    "}
                             {if file.is_public { "pub" } else { "priv" }}
                             {"    "}

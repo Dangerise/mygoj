@@ -92,3 +92,24 @@ pub async fn init_login_state() {
 pub fn loading_page() -> Element {
     rsx! { "Loading" }
 }
+
+pub fn time_diff(diff: u64) -> String {
+    const MIN: u64 = 60;
+    const HOUR: u64 = MIN * 60;
+    const DAY: u64 = HOUR * 24;
+    const MONTH: u64 = DAY * 30;
+    const YEAR: u64 = MONTH * 12;
+    if diff > YEAR {
+        format!("{} year ago", diff / YEAR)
+    } else if diff > MONTH {
+        format!("{} month ago", diff / MONTH)
+    } else if diff > DAY {
+        format!("{} day ago", diff / DAY)
+    } else if diff > HOUR {
+        format!("{} hour ago", diff / HOUR)
+    } else if diff > MIN {
+        format!("{} minute ago", diff / MIN)
+    } else {
+        format!("just now")
+    }
+}

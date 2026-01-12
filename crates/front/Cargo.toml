@@ -31,6 +31,7 @@ web-sys = { version = "0.3.83", features = [
   "Window"
 ] }
 ws_stream_wasm = "0.7.5"
+human_bytes = { version = "0.4.3", features = ["si-units"] }
 
 [features]
 independent = []
