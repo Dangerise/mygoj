@@ -4,7 +4,6 @@ use compact_str::CompactString;
 use dioxus::html::FileData;
 use shared::problem::*;
 use utility::loading_page;
-use uuid::Uuid;
 
 #[derive(Clone, PartialEq)]
 struct UploadedFile {
@@ -60,7 +59,10 @@ impl std::fmt::Display for FileState {
 
 #[derive(Debug, Clone, PartialEq)]
 struct EditingProblemFile {
-    file: ProblemFile,
+    is_public: bool,
+    path: CompactString,
+    size: u64,
+    last_modified: i64,
     state: FileState,
     is_selected: bool,
 }
@@ -156,27 +158,31 @@ fn render_files_view(
     if !show_upload.cloned() && !uploaded.is_empty() {
         let uploaded = uploaded.replace(Vec::new());
         let mut files = files.as_mut().unwrap();
-        let mut group=Vec::with_capacity(uploaded.len());
+        let mut group = Vec::with_capacity(uploaded.len());
         for new_file in uploaded {
-            let time = web_sys::js_sys::Date::now();
-            let file = ProblemFile {
-                path: new_file.path.clone(),
-                uuid: Uuid::new_v4(),
-                is_public: false,
-                size: new_file.content.len() as u64,
-                last_modified: time as i64,
-            };
-            let Some(old) = files.iter_mut().filter(|d| d.file.path == file.path).next() else {
+            let time = web_sys::js_sys::Date::now() / 1000.;
+            let size = new_file.content.len() as u64;
+            let last_modified = time as i64;
+            let path = new_file.path.clone();
+            let Some(old) = files.iter_mut().filter(|d| d.path == path).next() else {
                 files.push(EditingProblemFile {
-                    file,
+                    is_public: false,
+                    size,
+                    last_modified,
+                    path,
                     state: FileState::New,
                     is_selected: false,
                 });
                 group.push(Event::New(new_file));
                 continue;
             };
-            old.state = FileState::Changed;
-            old.file = file;
+            *old = EditingProblemFile {
+                path,
+                size,
+                last_modified,
+                state: FileState::Changed,
+                ..*old
+            };
             group.push(Event::Update(new_file));
         }
         add_group(group);
@@ -186,12 +192,12 @@ fn render_files_view(
         .as_ref()
         .unwrap()
         .iter()
-        .is_sorted_by(|a, b| a.file.path < b.file.path)
+        .is_sorted_by(|a, b| a.path < b.path)
     {
         files
             .as_mut()
             .unwrap()
-            .sort_unstable_by(|a, b| a.file.path.cmp(&b.file.path));
+            .sort_unstable_by(|a, b| a.path.cmp(&b.path));
     }
 
     let mut shift_button = use_signal(|| false);
@@ -239,9 +245,9 @@ fn render_files_view(
                                 }
                             },
                             input { r#type: "checkbox", checked: file.is_selected }
-                            a { {file.file.path.as_str()} }
+                            a { {file.path.as_str()} }
                             {"    "}
-                            {if file.file.is_public { "pub" } else { "priv" }}
+                            {if file.is_public { "pub" } else { "priv" }}
                             {"    "}
                             render_file_state { state: file.state }
                         }
@@ -258,7 +264,7 @@ fn render_files_view(
                             .filter(|d| d.is_selected && d.state != FileState::Removed)
                             .map(|d| {
                                 d.state = FileState::Removed;
-                                Event::Remove(d.file.path.clone())
+                                Event::Remove(d.path.clone())
                             })
                             .collect(),
                     );
@@ -273,12 +279,12 @@ fn render_files_view(
                             .unwrap()
                             .iter_mut()
                             .filter(|d| {
-                                d.is_selected && d.state != FileState::Removed && !d.file.is_public
+                                d.is_selected && d.state != FileState::Removed && !d.is_public
                             })
                             .map(|d| {
                                 d.state = FileState::Changed;
-                                d.file.is_public = true;
-                                Event::SetPub(d.file.path.clone())
+                                d.is_public = true;
+                                Event::SetPub(d.path.clone())
                             })
                             .collect(),
                     );
@@ -293,12 +299,12 @@ fn render_files_view(
                             .unwrap()
                             .iter_mut()
                             .filter(|d| {
-                                d.is_selected && d.state != FileState::Removed && d.file.is_public
+                                d.is_selected && d.state != FileState::Removed && d.is_public
                             })
                             .map(|d| {
                                 d.state = FileState::Changed;
-                                d.file.is_public = false;
-                                Event::SetPriv(d.file.path.clone())
+                                d.is_public = false;
+                                Event::SetPriv(d.path.clone())
                             })
                             .collect(),
                     );
@@ -440,11 +446,22 @@ pub fn ProblemEdit(pid: Pid) -> Element {
                     files.set(Some(
                         files_val
                             .into_iter()
-                            .map(|file| EditingProblemFile {
-                                file,
-                                state: FileState::Unchanged,
-                                is_selected: false,
-                            })
+                            .map(
+                                |ProblemFile {
+                                     path,
+                                     uuid: _,
+                                     is_public,
+                                     size,
+                                     last_modified,
+                                 }| EditingProblemFile {
+                                    is_public,
+                                    path,
+                                    size,
+                                    last_modified,
+                                    state: FileState::Unchanged,
+                                    is_selected: false,
+                                },
+                            )
                             .collect::<Vec<_>>(),
                     ));
                 };
