@@ -37,6 +37,7 @@ enum Event {
 #[derive(Debug, PartialEq, Clone)]
 struct EventGroup {
     evts: Vec<Event>,
+    snapshot: Vec<EditingProblemFile>,
 }
 
 impl FileState {
@@ -146,8 +147,10 @@ fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut evt_groups: Signal<Vec<EventGroup>>,
 ) -> Element {
-    let mut add_group = move |evts: Vec<_>| {
-        evt_groups.push(EventGroup { evts });
+    let mut add_group = move |snapshot, evts: Vec<_>| {
+        if !evts.is_empty() {
+            evt_groups.push(EventGroup { evts, snapshot });
+        }
     };
 
     tracing::info!("{files:#?}");
@@ -158,6 +161,7 @@ fn render_files_view(
     if !show_upload.cloned() && !uploaded.is_empty() {
         let uploaded = uploaded.replace(Vec::new());
         let mut files = files.as_mut().unwrap();
+        let snapshot = files.clone();
         let mut group = Vec::with_capacity(uploaded.len());
         for new_file in uploaded {
             let time = web_sys::js_sys::Date::now() / 1000.;
@@ -185,7 +189,7 @@ fn render_files_view(
             };
             group.push(Event::Update(new_file));
         }
-        add_group(group);
+        add_group(snapshot, group);
     }
 
     if !files
@@ -256,7 +260,18 @@ fn render_files_view(
             }
             button {
                 onclick: move |_| {
+                    let mut groups = evt_groups.write();
+                    if let Some(g) = groups.pop() {
+                        files.set(Some(g.snapshot));
+                    }
+                },
+                "undo"
+            }
+            button {
+                onclick: move |_| {
+                    let snapshot = files.as_ref().unwrap().clone();
                     add_group(
+                        snapshot,
                         files
                             .as_mut()
                             .unwrap()
@@ -273,7 +288,9 @@ fn render_files_view(
             }
             button {
                 onclick: move |_| {
+                    let snapshot = files.as_ref().unwrap().clone();
                     add_group(
+                        snapshot,
                         files
                             .as_mut()
                             .unwrap()
@@ -293,7 +310,9 @@ fn render_files_view(
             }
             button {
                 onclick: move |_| {
+                    let snapshot = files.as_ref().unwrap().clone();
                     add_group(
+                        snapshot,
                         files
                             .as_mut()
                             .unwrap()
