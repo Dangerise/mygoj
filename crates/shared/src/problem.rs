@@ -81,3 +81,11 @@ impl std::str::FromStr for Pid {
         Ok(Pid(CompactString::new(s)))
     }
 }
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub enum FileChangeEvent {
+    SetPriv(CompactString),
+    SetPub(CompactString),
+    Upload(CompactString),
+    Remove(CompactString),
+}

@@ -1,11 +1,12 @@
 use super::ServerError;
 use super::judge::judge_machines;
-use super::problem::{get_problem, get_problem_editable, get_problem_front};
+use super::problem::{commit_files_change, get_problem, get_problem_editable, get_problem_front};
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
 use compact_str::CompactString;
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
+use shared::problem::Pid;
 use shared::token::Token;
 use std::borrow::Cow;
 use std::sync::LazyLock;
@@ -122,26 +123,25 @@ pub async fn receive_front_message(
         None => None,
     };
 
+    let can_edit_problem = async |pid: &Pid| {
+        if let Some(user) = &logined_user {
+            if user.privilege.edit_problems || Some(user.uid) == get_problem(pid).await?.owner {
+                return Ok(());
+            }
+        }
+        Err(ServerError::Fuck)
+    };
+
     tracing::trace!("id {id} auth {:#?}", logined_user);
 
     match message {
         FrontMessage::GetProblemFiles(pid) => {
-            let Some(user) = logined_user else {
-                return Err(ServerError::Fuck);
-            };
-            if !user.privilege.edit_problems {
-                return Err(ServerError::Fuck);
-            }
+            can_edit_problem(&pid).await?;
             let files = get_problem(&pid).await.map(|x| x.files)?;
             to_json(&files)
         }
         FrontMessage::GetProblemEditable(pid) => {
-            let Some(user) = logined_user else {
-                return Err(ServerError::Fuck);
-            };
-            if !user.privilege.edit_problems {
-                return Err(ServerError::Fuck);
-            }
+            can_edit_problem(&pid).await?;
             let editable = get_problem_editable(&pid).await?;
             to_json(&editable)
         }
@@ -167,6 +167,11 @@ pub async fn receive_front_message(
             to_json(uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
+        FrontMessage::CommitProblemFiles(pid, evts) => {
+            can_edit_problem(&pid).await?;
+            let uuid = commit_files_change(pid, evts).await?;
+            to_json(uuid)
+        }
         FrontMessage::LoginUser(_, _) | FrontMessage::Logout => unreachable!(),
     }
 }

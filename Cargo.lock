@@ -3732,6 +3732,7 @@ dependencies = [
  "shared",
  "sqlx",
  "static_init",
+ "tempfile",
  "thiserror 2.0.17",
  "tokio",
  "tokio-util",

@@ -6,6 +6,7 @@ pub enum FrontMessage {
     GetProblemEditable(Pid),
     GetProblemFront(Pid),
     GetProblemFiles(Pid),
+    CommitProblemFiles(Pid, Vec<FileChangeEvent>),
     GetRecord(Rid),
     Submit(Submission),
     LoginUser(CompactString, CompactString),

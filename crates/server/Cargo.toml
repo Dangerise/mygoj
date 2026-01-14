@@ -23,6 +23,7 @@ serde_json.workspace = true
 shared = { path = "../shared", features = ["server"] }
 sqlx.workspace = true
 static_init.workspace = true
+tempfile.workspace = true
 thiserror.workspace = true
 tokio = { workspace = true, features = ["full"] }
 tokio-util.workspace = true
