@@ -32,10 +32,16 @@ pub fn router() -> Router {
     let timeout =
         TimeoutLayer::with_status_code(StatusCode::TOO_MANY_REQUESTS, Duration::from_secs(1));
 
+    let front_api = Router::new()
+        .route("/", any(front::receive_front_message))
+        .route("/record_ws", any(record::ws))
+        .layer(axum::middleware::from_fn(front::logined_user_layer))
+        .route("/login", any(front::login))
+        .route("/logout", any(front::logout));
+
     let api = Router::new()
         .route("/judge", any(judge::receive_message))
-        .route("/front", any(front::receive_front_message))
-        .route("/front/record_ws", any(record::ws))
+        .nest("/front", front_api)
         .layer(cors);
 
     front.nest("/api", api).layer(set_id).layer(timeout)

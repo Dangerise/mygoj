@@ -3,7 +3,6 @@ use super::judge::judge_machines;
 use super::problem::{get_problem, get_problem_editable, get_problem_front};
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
-use compact_str::CompactString;
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
 use shared::problem::Pid;
@@ -13,7 +12,7 @@ use std::sync::LazyLock;
 
 use axum::Json;
 use axum::extract::Path;
-use axum::http::{HeaderMap, StatusCode};
+use axum::http::StatusCode;
 use axum::response::{Html, Response};
 
 #[cfg(debug_assertions)]
@@ -72,54 +71,57 @@ pub async fn wasm(Path(path): Path<String>) -> Result<Response, StatusCode> {
     dir(format!("wasm/{path}")).await
 }
 
+use axum::Extension;
+use axum::extract::Request;
+use axum::middleware::Next;
+use axum_extra::typed_header::TypedHeader;
+use headers::authorization::{Authorization, Basic, Bearer};
+pub async fn logined_user_layer(
+    auth: Option<TypedHeader<Authorization<Bearer>>>,
+    mut request: Request,
+    next: Next,
+) -> Result<Response, ServerError> {
+    let login = if let Some(auth) = auth {
+        let token = auth.token();
+        let token = Token::decode(token.as_bytes()).ok_or(ServerError::Fuck)?;
+        let login = get_user_login(token).await?;
+        Some(login)
+    } else {
+        None
+    };
+    request.extensions_mut().insert(login);
+    let resp = next.run(request).await;
+    Ok(resp)
+}
+
+pub async fn login(
+    TypedHeader(auth): TypedHeader<Authorization<Basic>>,
+) -> Result<Response, ServerError> {
+    let ident = auth.username().into();
+    let pwd = auth.password().into();
+    let (token, logined_user) = user_login(ident, pwd).await?;
+    let resp = Json((token.encode(), logined_user)).into_response();
+    Ok(resp)
+}
+
+pub async fn logout(
+    TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
+) -> Result<(), ServerError> {
+    let token = Token::decode(auth.token().as_bytes()).ok_or(ServerError::Fuck)?;
+    remove_token(token).await?;
+    Ok(())
+}
+
+use shared::user::LoginedUser;
 pub async fn receive_front_message(
-    headers: HeaderMap,
+    Extension(logined_user): Extension<Option<LoginedUser>>,
     Json(message): Json<FrontMessage>,
 ) -> Result<Response, ServerError> {
-    let id = headers.get("x-request-id").unwrap().to_str().unwrap();
-    tracing::trace!("new front message {id}");
-    tracing::trace_span!("front message", id = id);
-
-    async fn login_user(ident: CompactString, pwd: CompactString) -> Result<Response, ServerError> {
-        let token = user_login(ident, pwd).await?;
-        let logined_user = get_user_login(token).await?;
-        let resp = Json((token.encode(), logined_user)).into_response();
-        Ok(resp)
-    }
     fn to_json<T: serde::Serialize>(val: T) -> Result<Response, ServerError> {
         Ok(Response::new(Body::new(
             serde_json::to_string_pretty(&val).map_err(ServerError::into_internal)?,
         )))
     }
-    let token = headers
-        .get(shared::constant::LOGIN_TOKEN)
-        .map(|v| {
-            Token::decode(v.as_bytes()).ok_or_else(|| {
-                tracing::trace!("{id} deny for bad token");
-                ServerError::Fuck
-            })
-        })
-        .transpose()?;
-    match message {
-        FrontMessage::LoginUser(ident, pwd) => {
-            return login_user(ident, pwd).await;
-        }
-        FrontMessage::Logout => {
-            if let Some(token) = token {
-                remove_token(token).await?;
-            }
-            return Ok((Json(()),).into_response());
-        }
-        _ => {}
-    }
-    let logined_user = match token {
-        Some(token) => {
-            let ret = get_user_login(token).await?;
-            Some(ret)
-        }
-        None => None,
-    };
-
     let can_edit_problem = async |pid: &Pid| {
         if let Some(user) = &logined_user {
             if user.privilege.edit_problems || Some(user.uid) == get_problem(pid).await?.owner {
@@ -128,8 +130,6 @@ pub async fn receive_front_message(
         }
         Err(ServerError::Fuck)
     };
-
-    tracing::trace!("id {id} auth {:#?}", logined_user);
 
     match message {
         FrontMessage::GetProblemFiles(pid) => {
@@ -164,6 +164,5 @@ pub async fn receive_front_message(
             to_json(uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
-        FrontMessage::LoginUser(_, _) | FrontMessage::Logout => unreachable!(),
     }
 }

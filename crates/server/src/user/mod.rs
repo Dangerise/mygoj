@@ -21,6 +21,17 @@ pub struct User {
     pub created_time: i64,
 }
 
+impl User {
+    pub fn logined_user(self) -> LoginedUser {
+        LoginedUser {
+            uid: self.uid,
+            email: self.email,
+            nickname: self.nickname,
+            privilege: self.privilege,
+        }
+    }
+}
+
 async fn get_user(uid: Uid) -> Result<Option<User>, ServerError> {
     if let Some(user) = cache::get_user(uid).await {
         return Ok(Some(user));
@@ -104,7 +115,7 @@ async fn find_by_token(token: Token) -> Result<Option<Uid>, ServerError> {
 pub async fn user_login(
     ident: CompactString,
     password: CompactString,
-) -> Result<Token, ServerError> {
+) -> Result<(Token, LoginedUser), ServerError> {
     let uid = if ident.contains("@") {
         find_by_email(&ident).await?
     } else {
@@ -122,7 +133,7 @@ pub async fn user_login(
         .await
         .map_err(ServerError::into_internal)?;
 
-    Ok(token)
+    Ok((token, user.logined_user()))
 }
 
 pub async fn get_user_login(token: Token) -> Result<LoginedUser, ServerError> {
@@ -133,20 +144,15 @@ pub async fn get_user_login(token: Token) -> Result<LoginedUser, ServerError> {
     if !user.privilege.enter_site {
         return Err(ServerError::NoPrivilege);
     }
-    let logined = LoginedUser {
-        uid: user.uid,
-        nickname: user.nickname,
-        email: user.email,
-        privilege: user.privilege,
-    };
-    Ok(logined)
+    Ok(user.logined_user())
 }
 
 pub async fn set_su(uid: Uid) -> Result<(), ServerError> {
     update_user(uid, |user| {
         user.privilege = Privilege::ALL;
         Ok(())
-    }).await
+    })
+    .await
 }
 
 pub async fn remove_token(token: Token) -> Result<(), ServerError> {

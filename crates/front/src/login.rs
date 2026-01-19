@@ -12,10 +12,18 @@ pub fn login_required(redirect: Route) {
 }
 
 async fn login(email: String, password: String) -> eyre::Result<()> {
-    let (token, login_user): (String, LoginedUser) =
-        send_message(FrontMessage::LoginUser(email.into(), password.into())).await?;
+    let resp = reqwest::Client::new()
+        .post(format!("{}/api/front/login", *SERVER_URL))
+        .basic_auth(email, Some(password))
+        .send()
+        .await?;
+    if resp.status() != StatusCode::OK {
+        let err: ServerError = resp.json().await?;
+        return Err(err.into());
+    }
+    let (token, login_user): (String, LoginedUser) = resp.json().await?;
     storage()
-        .set(shared::constant::LOGIN_TOKEN, &token)
+        .set_item(shared::constant::LOGIN_TOKEN, &token)
         .unwrap();
     *LOGIN_STATE.write() = Some(login_user);
     Ok(())

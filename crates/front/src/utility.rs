@@ -60,7 +60,7 @@ where
         .post(format!("{}/api/front", *SERVER_URL))
         .json(&msg);
     if let Some(token) = token {
-        req = req.header(shared::constant::LOGIN_TOKEN, token);
+        req = req.bearer_auth(token);
     }
     let resp = req.send().await?;
     if resp.status() != StatusCode::OK {
