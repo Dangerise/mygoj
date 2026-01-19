@@ -25,7 +25,7 @@ impl Problem {
     }
 }
 
-pub async fn get_problem(pid: &Pid) -> Result<Problem, sqlx::Error> {
+pub async fn get_problem(pid: &Pid) -> Result<Arc<Problem>, sqlx::Error> {
     tracing::trace!("DB fetch problem {pid}");
     let pid = pid.0.as_str();
     let json = sqlx::query!("SELECT (json) FROM problems WHERE pid=$1", pid)
@@ -35,11 +35,10 @@ pub async fn get_problem(pid: &Pid) -> Result<Problem, sqlx::Error> {
         .unwrap();
 
     let p = serde_json::from_str(&json).unwrap();
-
-    Ok(p)
+    Ok(Arc::new(p))
 }
 
-pub async fn set_problem(pid: &Pid, problem: Problem) -> Result<(), sqlx::Error> {
+pub async fn set_problem(pid: &Pid, problem: &Problem) -> Result<(), sqlx::Error> {
     let pid = pid.0.as_str();
     let json = serde_json::to_string(&problem).unwrap();
     let owner = problem.owner.map(|x| x.0 as i64);

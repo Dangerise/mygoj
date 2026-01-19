@@ -101,11 +101,13 @@ pub async fn receive_message(Json(msg): Json<JudgeMessage>) -> Result<Response, 
                 }
                 CompileResult::Error(ce) => RecordStatus::CompileError(ce),
             };
-            update_record(rid, status).await?;
+            tokio::spawn(update_record(rid, status)).await.unwrap()?;
             to_json(())
         }
         JudgeMessage::SendAllJudgeResults(rid, res) => {
-            update_record(rid, RecordStatus::Completed(res)).await?;
+            tokio::spawn(update_record(rid, RecordStatus::Completed(res)))
+                .await
+                .unwrap()?;
             to_json(())
         }
     }

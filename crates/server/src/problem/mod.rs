@@ -28,7 +28,7 @@ pub struct Problem {
     pub files: Vec<ProblemFile>,
 }
 
-pub async fn get_problem(pid: &Pid) -> Result<Problem, ServerError> {
+pub async fn get_problem(pid: &Pid) -> Result<Arc<Problem>, ServerError> {
     if let Some(ret) = cache::get_problem(pid).await {
         return Ok(ret);
     }
@@ -40,8 +40,8 @@ pub async fn get_problem(pid: &Pid) -> Result<Problem, ServerError> {
     Ok(ret)
 }
 
-pub async fn set_problem(pid: &Pid, data: Problem) -> Result<(), ServerError> {
-    db::set_problem(pid, data.clone())
+pub async fn set_problem(pid: &Pid, data: Arc<Problem>) -> Result<(), ServerError> {
+    db::set_problem(pid, &data)
         .await
         .map_err(ServerError::into_internal)?;
     cache::update_problem(pid, data).await;
@@ -63,16 +63,16 @@ pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
     let problem = get_problem(pid).await?;
 
     let front = ProblemFront {
-        title: problem.title,
-        statement: problem.statement,
+        title: problem.title.clone(),
+        statement: problem.statement.clone(),
         time_limit: problem.time_limit,
         memory_limit: problem.memory_limit,
         owner: problem.owner,
         public_files: problem
             .files
-            .into_iter()
+            .iter()
             .filter(|f| f.is_public)
-            .map(|f| f.path)
+            .map(|f| f.path.clone())
             .collect(),
         pid: pid.clone(),
     };
@@ -90,6 +90,7 @@ pub async fn problem_read_lock(pid: &Pid) -> OwnedRwLockReadGuard<()> {
         .await
 }
 
+#[must_use]
 pub async fn problem_write_lock(pid: &Pid) -> OwnedRwLockWriteGuard<()> {
     PROBLEM_LOCKS
         .entry(pid.clone())
@@ -103,8 +104,8 @@ pub async fn problem_data(pid: Pid) -> Result<ProblemData, ServerError> {
     let problem = get_problem(&pid).await?;
     let data = ProblemData {
         pid,
-        files: problem.files,
-        testcases: problem.testcases,
+        files: problem.files.clone(),
+        testcases: problem.testcases.clone(),
         time_limit: problem.time_limit,
         memory_limit: problem.memory_limit,
     };

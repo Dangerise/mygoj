@@ -134,7 +134,7 @@ pub async fn receive_front_message(
     match message {
         FrontMessage::GetProblemFiles(pid) => {
             can_edit_problem(&pid).await?;
-            let files = get_problem(&pid).await.map(|x| x.files)?;
+            let files = get_problem(&pid).await.map(|x| x.files.clone())?;
             to_json(&files)
         }
         FrontMessage::GetProblemEditable(pid) => {
@@ -156,11 +156,11 @@ pub async fn receive_front_message(
         }
         FrontMessage::Submit(submission) => {
             let uid = logined_user.map(|x| x.uid).ok_or(ServerError::Fuck)?;
-            let rid = submit(uid, submission).await?;
+            let rid = tokio::spawn(submit(uid, submission)).await.unwrap()?;
             to_json(rid)
         }
         FrontMessage::RegisterUser(registration) => {
-            let uid = user_register(registration).await?;
+            let uid = tokio::spawn(user_register(registration)).await.unwrap()?;
             to_json(uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
