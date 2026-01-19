@@ -43,7 +43,7 @@ enum Command {
 #[tokio::main]
 async fn main() {
     tracing_subscriber::fmt()
-        .with_env_filter("mygoj=trace,server=trace")
+        .with_env_filter("mygoj=trace,server=trace,tower_http::trace=trace")
         .init();
     let cli = Cli::parse();
     match cli.command {

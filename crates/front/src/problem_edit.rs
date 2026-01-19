@@ -4,6 +4,7 @@ use compact_str::CompactString;
 use dioxus::html::FileData;
 use shared::problem::*;
 use utility::loading_page;
+use web_sys::FormData;
 
 #[derive(Clone, PartialEq)]
 struct UploadedFile {
@@ -26,7 +27,7 @@ enum FileState {
 }
 
 #[derive(Debug, PartialEq, Clone)]
-enum Event {
+enum FileEvent {
     Update(UploadedFile),
     New(UploadedFile),
     SetPub(CompactString),
@@ -36,7 +37,7 @@ enum Event {
 
 #[derive(Debug, PartialEq, Clone)]
 struct EventGroup {
-    evts: Vec<Event>,
+    evts: Vec<FileEvent>,
     snapshot: Vec<EditingProblemFile>,
 }
 
@@ -66,6 +67,56 @@ struct EditingProblemFile {
     last_modified: i64,
     state: FileState,
     is_selected: bool,
+}
+
+async fn commit_files(evt_groups: Signal<Vec<EventGroup>>) -> eyre::Result<()> {
+    let pid: Pid = use_context();
+
+    use web_sys::{Blob, js_sys::Uint8Array};
+    let form = FormData::new().unwrap();
+    let mut events = Vec::new();
+    let mut to_upload = Vec::new();
+    for g in evt_groups.iter() {
+        for e in g.evts.iter() {
+            use FileEvent::*;
+            let t = match e {
+                Update(file) => {
+                    to_upload.push(file.clone());
+                    FileChangeEvent::Upload(file.path.clone())
+                }
+                New(file) => {
+                    to_upload.push(file.clone());
+                    FileChangeEvent::Upload(file.path.clone())
+                }
+                SetPriv(path) => FileChangeEvent::SetPriv(path.clone()),
+                SetPub(path) => FileChangeEvent::SetPub(path.clone()),
+                Remove(path) => FileChangeEvent::Remove(path.clone()),
+            };
+            events.push(t);
+        }
+    }
+    form.append_with_str("meta", &serde_json::to_string(&events).unwrap())
+        .unwrap();
+    for file in to_upload {
+        let array = Uint8Array::new_from_slice(&file.content);
+        let blob = Blob::new_with_u8_array_sequence(array.as_ref()).unwrap();
+        form.append_with_blob_and_filename("file", &blob, &file.path)
+            .unwrap();
+    }
+    let token = storage()
+        .get(shared::constant::LOGIN_TOKEN)
+        .unwrap()
+        .unwrap();
+    gloo::net::http::Request::post(&format!(
+        "{}/api/front/commit_problem_files/{}",
+        *SERVER_URL, pid.0
+    ))
+    .header(reqwest::header::AUTHORIZATION.as_str(), &format!("Bearer {}", token))
+    .body(form)
+    .unwrap()
+    .send()
+    .await?;
+    Ok(())
 }
 
 #[component]
@@ -169,7 +220,7 @@ fn render_files_view(
         }
     };
 
-    tracing::info!("{files:#?}");
+    // tracing::info!("{files:#?}");
 
     let mut show_upload = use_signal(|| false);
     let mut uploaded = use_signal(Vec::<UploadedFile>::new);
@@ -193,7 +244,7 @@ fn render_files_view(
                     state: FileState::New,
                     is_selected: false,
                 });
-                group.push(Event::New(new_file));
+                group.push(FileEvent::New(new_file));
                 continue;
             };
             *old = EditingProblemFile {
@@ -203,7 +254,7 @@ fn render_files_view(
                 state: FileState::Changed,
                 ..*old
             };
-            group.push(Event::Update(new_file));
+            group.push(FileEvent::Update(new_file));
         }
         add_group(snapshot, group);
     }
@@ -307,7 +358,7 @@ fn render_files_view(
                             .filter(|d| d.is_selected && d.state != FileState::Removed)
                             .map(|d| {
                                 d.state = FileState::Removed;
-                                Event::Remove(d.path.clone())
+                                FileEvent::Remove(d.path.clone())
                             })
                             .collect(),
                     );
@@ -329,7 +380,7 @@ fn render_files_view(
                             .map(|d| {
                                 d.state = FileState::Changed;
                                 d.is_public = true;
-                                Event::SetPub(d.path.clone())
+                                FileEvent::SetPub(d.path.clone())
                             })
                             .collect(),
                     );
@@ -351,7 +402,7 @@ fn render_files_view(
                             .map(|d| {
                                 d.state = FileState::Changed;
                                 d.is_public = false;
-                                Event::SetPriv(d.path.clone())
+                                FileEvent::SetPriv(d.path.clone())
                             })
                             .collect(),
                     );
@@ -364,8 +415,16 @@ fn render_files_view(
                 },
                 "upload"
             }
+            hr {}
+            button {
+                onclick: move |_| {
+                    async move {
+                        commit_files(evt_groups).await.unwrap();
+                    }
+                },
+                "commit"
+            }
         }
-
     }
 }
 
@@ -469,6 +528,7 @@ fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element {
 
 #[component]
 pub fn ProblemEdit(pid: Pid) -> Element {
+    use_context_provider(|| pid.clone());
     let mut fetched = use_signal(|| false);
     let mut editable = use_signal(|| None);
     let mut files = use_signal(|| None);
@@ -532,7 +592,6 @@ pub fn ProblemEdit(pid: Pid) -> Element {
                     hr {}
                     render_files_edit { files, evt_groups }
                     hr {}
-                    button { onclick: move |_| {}, "save" }
                 }
             } else {
                 rsx! {

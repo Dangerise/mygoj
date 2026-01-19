@@ -4,6 +4,7 @@ mod db;
 use super::ServerError;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
+use shared::problem::*;
 pub use shared::problem::*;
 use shared::user::Uid;
 use static_init::dynamic;
@@ -135,4 +136,49 @@ pub async fn send_problem_file(pid: Pid, filename: &str) -> Result<Response, Ser
     let stream = ReaderStream::with_capacity(file, 1 << 20);
     let resp = Response::new(Body::from_stream(stream));
     Ok(resp)
+}
+
+pub async fn can_manage_problem(user: &LoginedUser, pid: &Pid) -> Result<bool, ServerError> {
+    if user.privilege.edit_problems {
+        return Ok(true);
+    }
+    let p = get_problem(pid).await?;
+    if p.owner == Some(user.uid) {
+        return Ok(true);
+    }
+    return Ok(false);
+}
+
+use axum::extract::{Extension, Multipart, Path};
+use shared::user::LoginedUser;
+use std::sync::OnceLock;
+pub async fn commit_problem_files(
+    Extension(login): Extension<Option<LoginedUser>>,
+    Path(pid): Path<Pid>,
+    mut multipart: Multipart,
+) -> Result<(), ServerError> {
+    let login = login.ok_or(ServerError::Fuck)?;
+    tracing::trace!("got");
+    if !can_manage_problem(&login, &pid).await? {
+        return Err(ServerError::Fuck);
+    }
+    // let mut meta = OnceLock::new();
+    while let Some(field) = multipart
+        .next_field()
+        .await
+        .map_err(|_| ServerError::Network)?
+    {
+        tracing::trace!("name {:?} file {:?}", field.name(), field.file_name());
+        // let name = field.name().ok_or(ServerError::Fuck)?;
+        // if name == "meta" {
+        //     let json = field.text().await.unwrap();
+        //     let value: Vec<FileChangeEvent> =
+        //         serde_json::from_str(&json).map_err(|_| ServerError::Fuck)?;
+        //     meta.set(Arc::new(value)).unwrap();
+        // } else if name == "file" {
+        // } else {
+        //     return Err(ServerError::Fuck);
+        // }
+    }
+    Ok(())
 }

@@ -20,6 +20,8 @@ pub enum ServerError {
     UsernameExist,
     #[error("no privilege")]
     NoPrivilege,
+    #[error("network error")]
+    Network,
 }
 
 #[cfg(feature = "server")]
@@ -46,6 +48,7 @@ mod on_server {
         pub fn status_code(&self) -> StatusCode {
             use ServerError::*;
             match self {
+                Network => StatusCode::BAD_REQUEST,
                 UserNotFound | PasswordWrong | Fuck | EmailExist | UsernameExist => {
                     StatusCode::BAD_REQUEST
                 }

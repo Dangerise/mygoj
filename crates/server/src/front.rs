@@ -1,6 +1,6 @@
 use super::ServerError;
 use super::judge::judge_machines;
-use super::problem::{get_problem, get_problem_editable, get_problem_front};
+use super::problem::{can_manage_problem, get_problem, get_problem_editable, get_problem_front};
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
 use rust_embed::RustEmbed;
@@ -89,6 +89,7 @@ pub async fn logined_user_layer(
     } else {
         None
     };
+    tracing::trace!("auth {login:?}");
     request.extensions_mut().insert(login);
     let resp = next.run(request).await;
     Ok(resp)
@@ -124,7 +125,7 @@ pub async fn receive_front_message(
     }
     let can_edit_problem = async |pid: &Pid| {
         if let Some(user) = &logined_user {
-            if user.privilege.edit_problems || Some(user.uid) == get_problem(pid).await?.owner {
+            if can_manage_problem(user, pid).await? {
                 return Ok(());
             }
         }
