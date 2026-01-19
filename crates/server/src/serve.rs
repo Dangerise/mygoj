@@ -36,7 +36,6 @@ pub fn router() -> Router {
         .route("/judge", any(judge::receive_message))
         .route("/front", any(front::receive_front_message))
         .route("/front/record_ws", any(record::ws))
-        .route("/front/problem_file_upload/{uuid}/{*path}",any(problem::upload_problem_file))
         .layer(cors);
 
     front.nest("/api", api).layer(set_id).layer(timeout)

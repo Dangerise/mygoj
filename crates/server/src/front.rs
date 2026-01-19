@@ -1,6 +1,6 @@
 use super::ServerError;
 use super::judge::judge_machines;
-use super::problem::{commit_files_change, get_problem, get_problem_editable, get_problem_front};
+use super::problem::{get_problem, get_problem_editable, get_problem_front};
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
 use compact_str::CompactString;
@@ -65,16 +65,13 @@ async fn dir(path: String) -> Result<Response, StatusCode> {
 }
 
 pub async fn assets(Path(path): Path<String>) -> Result<Response, StatusCode> {
-    // tracing::info!("assets {path}");
     dir(format!("assets/{path}")).await
 }
 
 pub async fn wasm(Path(path): Path<String>) -> Result<Response, StatusCode> {
-    // tracing::info!("wasm {path}");
     dir(format!("wasm/{path}")).await
 }
 
-#[axum::debug_handler]
 pub async fn receive_front_message(
     headers: HeaderMap,
     Json(message): Json<FrontMessage>,
@@ -167,11 +164,6 @@ pub async fn receive_front_message(
             to_json(uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
-        FrontMessage::CommitProblemFiles(pid, evts) => {
-            can_edit_problem(&pid).await?;
-            let uuid = commit_files_change(pid, evts).await?;
-            to_json(uuid)
-        }
         FrontMessage::LoginUser(_, _) | FrontMessage::Logout => unreachable!(),
     }
 }
