@@ -1,20 +1,20 @@
 mod cache;
 mod db;
-mod problem_lock;
 
 use super::ServerError;
-use dashmap::{DashMap, DashSet};
-use problem_lock::ProblemLock;
+use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 pub use shared::problem::*;
 use shared::user::Uid;
 use static_init::dynamic;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::fs;
+use tokio::sync::{OwnedRwLockReadGuard, OwnedRwLockWriteGuard, RwLock};
 use tokio_util::io::ReaderStream;
 
 #[dynamic]
-static PROBLEM_LOCKS: DashMap<Pid, ProblemLock> = DashMap::new();
+static PROBLEM_LOCKS: DashMap<Pid, Arc<RwLock<()>>> = DashMap::new();
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Problem {
@@ -80,28 +80,23 @@ pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
     Ok(front)
 }
 
-pub async fn problem_read_lock(pid: &Pid) {
+#[must_use]
+pub async fn problem_read_lock(pid: &Pid) -> OwnedRwLockReadGuard<()> {
     PROBLEM_LOCKS
         .entry(pid.clone())
         .or_default()
-        .read_lock()
+        .clone()
+        .read_owned()
         .await
 }
 
-pub async fn problem_write_lock(pid: &Pid) {
+pub async fn problem_write_lock(pid: &Pid) -> OwnedRwLockWriteGuard<()> {
     PROBLEM_LOCKS
         .entry(pid.clone())
         .or_default()
-        .write_lock()
+        .clone()
+        .write_owned()
         .await
-}
-
-pub fn problem_write_unlock(pid: &Pid) {
-    PROBLEM_LOCKS.get(pid).unwrap().write_unlock()
-}
-
-pub fn problem_read_unlock(pid: &Pid) {
-    PROBLEM_LOCKS.get(pid).unwrap().read_unlock()
 }
 
 pub async fn problem_data(pid: Pid) -> Result<ProblemData, ServerError> {

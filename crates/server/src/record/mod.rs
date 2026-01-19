@@ -3,13 +3,14 @@ mod db;
 
 use super::ServerError;
 use super::judge::JUDGE_QUEUE;
-use super::problem::{get_problem, problem_read_lock, problem_read_unlock};
+use super::problem::{get_problem, problem_read_lock};
 use dashmap::DashMap;
 use shared::judge::SingleJudgeResult;
 use shared::record::*;
 use shared::submission::Submission;
 use shared::user::Uid;
 use static_init::dynamic;
+use tokio::sync::OwnedRwLockReadGuard;
 use tokio::sync::broadcast;
 
 use axum::extract::{
@@ -30,18 +31,27 @@ impl RecordChannel {
     }
 }
 
-#[dynamic]
-static JUDGING_RECORDS: DashMap<Rid, Record> = DashMap::new();
+struct JudgingRecord {
+    record: Record,
+    channel: RecordChannel,
+    problem_lock: OwnedRwLockReadGuard<()>,
+}
 
 #[dynamic]
-static RECORD_CHANNEL: DashMap<Rid, RecordChannel> = DashMap::new();
+static JUDGING_RECORDS: DashMap<Rid, JudgingRecord> = DashMap::new();
 
 pub async fn new_record(rid: Rid, record: Record) -> Result<(), ServerError> {
     let pid = &record.pid;
     let case_count = get_problem(pid).await?.testcases.len();
-    problem_read_lock(pid).await;
-    JUDGING_RECORDS.insert(rid, record);
-    RECORD_CHANNEL.insert(rid, RecordChannel::new(case_count * 2));
+    let lock = problem_read_lock(pid).await;
+    JUDGING_RECORDS.insert(
+        rid,
+        JudgingRecord {
+            record,
+            channel: RecordChannel::new(case_count * 2),
+            problem_lock: lock,
+        },
+    );
     {
         let mut queue = JUDGE_QUEUE.lock().await;
         queue.push_back(rid);
@@ -80,6 +90,11 @@ pub async fn update_record_single(
     res: SingleJudgeResult,
 ) -> Result<(), ServerError> {
     let mut record = JUDGING_RECORDS.get_mut(&rid).unwrap();
+    let JudgingRecord {
+        record,
+        channel,
+        problem_lock: _,
+    } = &mut *record;
     let RecordStatus::Running(status) = &mut record.status else {
         unreachable!()
     };
@@ -90,9 +105,7 @@ pub async fn update_record_single(
 
     cache::update_record(rid, record.clone()).await;
 
-    drop(record);
-
-    let sender = &RECORD_CHANNEL.get(&rid).unwrap().tx;
+    let sender = &channel.tx;
     sender
         .send(RecordMessage::NewSingleResult(idx, res))
         .unwrap();
@@ -102,7 +115,6 @@ pub async fn update_record_single(
 
 pub async fn update_record(rid: Rid, status: RecordStatus) -> Result<(), ServerError> {
     tracing::info!("update rid {} {:#?}", rid, &status);
-
     use tokio::sync::broadcast::Sender;
     let send = |sender: &Sender<RecordMessage>| {
         let status = status.clone();
@@ -117,8 +129,15 @@ pub async fn update_record(rid: Rid, status: RecordStatus) -> Result<(), ServerE
     };
 
     if status.done() {
-        problem_read_unlock(&get_record(rid).await?.pid);
-        let (_, mut record) = JUDGING_RECORDS.remove(&rid).unwrap();
+        let (
+            _,
+            JudgingRecord {
+                mut record,
+                channel,
+                problem_lock,
+            },
+        ) = JUDGING_RECORDS.remove(&rid).unwrap();
+        drop(problem_lock);
         record.status = status.clone();
 
         cache::update_record(rid, record.clone()).await;
@@ -126,16 +145,13 @@ pub async fn update_record(rid: Rid, status: RecordStatus) -> Result<(), ServerE
             .await
             .map_err(ServerError::into_internal)?;
 
-        let channel = RECORD_CHANNEL.remove(&rid).unwrap().1;
         send(&channel.tx);
     } else {
         let mut record = JUDGING_RECORDS.get_mut(&rid).unwrap();
-        record.status = status.clone();
-        cache::update_record(rid, record.clone()).await;
-        drop(record);
+        record.record.status = status.clone();
+        cache::update_record(rid, record.record.clone()).await;
 
-        let sender = RECORD_CHANNEL.get(&rid).unwrap();
-        let sender = &sender.tx;
+        let sender = &record.channel.tx;
         send(sender);
     }
 
@@ -162,7 +178,7 @@ pub async fn ws(
 }
 
 async fn handle_socket(mut socket: WebSocket, rid: Rid) {
-    let Some(mut receiver) = RECORD_CHANNEL.get(&rid).map(|x| x.tx.subscribe()) else {
+    let Some(mut receiver) = JUDGING_RECORDS.get(&rid).map(|x| x.channel.tx.subscribe()) else {
         return;
     };
     tracing::info!("handle connect for {rid}");
