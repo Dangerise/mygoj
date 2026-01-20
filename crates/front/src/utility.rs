@@ -113,3 +113,15 @@ pub fn time_diff(diff: u64) -> String {
         format!("just now")
     }
 }
+
+#[component]
+pub fn LoadingDialog(loading: bool) -> Element {
+    rsx! {
+        document::Stylesheet { href: asset!("assets/loading-dialog.css") }
+        DialogRoot { open: loading,
+            DialogContent {
+                div { class: "loading-spinner" }
+            }
+        }
+    }
+}

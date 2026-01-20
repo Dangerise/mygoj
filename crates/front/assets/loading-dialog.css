@@ -1,0 +1,19 @@
+/* 转圈加载动画的样式 */
+.loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3; /* 浅色边框 */
+    border-top: 4px solid #409eff; /* 蓝色顶部边框（旋转时显示） */
+    border-radius: 50%; /* 圆形 */
+    animation: spin 1s linear infinite; /* 旋转动画 */
+}
+
+/* 定义旋转动画 */
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    } /* 初始角度 */
+    100% {
+        transform: rotate(360deg);
+    } /* 旋转一周 */
+}

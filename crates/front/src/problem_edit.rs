@@ -69,7 +69,7 @@ struct EditingProblemFile {
     is_selected: bool,
 }
 
-async fn commit_files(evt_groups: Signal<Vec<EventGroup>>) -> eyre::Result<()> {
+async fn commit_files(mut evt_groups: Signal<Vec<EventGroup>>) -> eyre::Result<()> {
     let pid: Pid = use_context();
 
     use web_sys::{Blob, js_sys::Uint8Array};
@@ -111,11 +111,17 @@ async fn commit_files(evt_groups: Signal<Vec<EventGroup>>) -> eyre::Result<()> {
         "{}/api/front/commit_problem_files/{}",
         *SERVER_URL, pid.0
     ))
-    .header(reqwest::header::AUTHORIZATION.as_str(), &format!("Bearer {}", token))
+    .header(
+        reqwest::header::AUTHORIZATION.as_str(),
+        &format!("Bearer {}", token),
+    )
     .body(form)
     .unwrap()
     .send()
     .await?;
+
+    evt_groups.clear();
+
     Ok(())
 }
 
@@ -165,7 +171,8 @@ fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Elem
                 button {
                     onclick: move |_| {
                         spawn(async move {
-                            let selected = selected.read();
+                            let mut signal_selected=selected;
+                            let selected = signal_selected.read();
                             let files = selected.iter().map(|f| f.read_bytes());
                             let files = futures_util::future::join_all(files).await;
                             let mut uploaded = uploaded.write();
@@ -183,6 +190,8 @@ fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Elem
                                         content,
                                     });
                             }
+                            drop(selected);
+                            signal_selected.clear();
                             show.set(false);
                         });
                     },
@@ -415,15 +424,6 @@ fn render_files_view(
                 },
                 "upload"
             }
-            hr {}
-            button {
-                onclick: move |_| {
-                    async move {
-                        commit_files(evt_groups).await.unwrap();
-                    }
-                },
-                "commit"
-            }
         }
     }
 }
@@ -433,10 +433,30 @@ fn render_files_edit(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut evt_groups: Signal<Vec<EventGroup>>,
 ) -> Element {
+    let mut commiting = use_signal(|| false);
     rsx! {
         render_files_view { files, evt_groups }
         hr {}
         render_events { evt_groups }
+        hr {}
+        button {
+            onclick: move |_| {
+                async move {
+                    commiting.set(true);
+                    commit_files(evt_groups).await.unwrap();
+                    commiting.set(false);
+                    files
+                        .as_mut()
+                        .unwrap()
+                        .iter_mut()
+                        .for_each(|d| {
+                            d.state = FileState::Unchanged;
+                        });
+                }
+            },
+            "commit"
+        }
+        LoadingDialog { loading: commiting() }
     }
 }
 
