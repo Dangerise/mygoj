@@ -44,7 +44,7 @@ pub async fn set_problem(pid: &Pid, problem: &Problem) -> Result<(), sqlx::Error
     let owner = problem.owner.map(|x| x.0 as i64);
     let db = DB.get().unwrap();
     sqlx::query!(
-        "UPDATE problems SET pid=$1,owner=$2,json=$3",
+        "UPDATE problems SET owner=$2,json=$3 WHERE pid=$1",
         pid,
         owner,
         json

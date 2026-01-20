@@ -86,6 +86,15 @@ impl std::str::FromStr for Pid {
 pub enum FileChangeEvent {
     SetPriv(CompactString),
     SetPub(CompactString),
-    Upload(CompactString),
+    Upload {
+        path: CompactString,
+        size: u64,
+        time: i64,
+    },
     Remove(CompactString),
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct FileChangeMeta {
+    pub evts: Vec<FileChangeEvent>,
 }

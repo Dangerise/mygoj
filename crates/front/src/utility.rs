@@ -1,5 +1,9 @@
 use super::*;
 
+pub fn now() -> i64 {
+    (web_sys::js_sys::Date::now() / 1000.) as i64
+}
+
 #[track_caller]
 pub fn storage() -> web_sys::Storage {
     web_sys::window().unwrap().local_storage().unwrap().unwrap()

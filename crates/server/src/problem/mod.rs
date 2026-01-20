@@ -4,13 +4,14 @@ mod db;
 use super::ServerError;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
-use shared::problem::*;
 pub use shared::problem::*;
 use shared::user::Uid;
 use static_init::dynamic;
+use std::collections::HashMap;
 use std::path::PathBuf;
 use std::sync::Arc;
 use tokio::fs;
+use tokio::io::AsyncWriteExt;
 use tokio::sync::{OwnedRwLockReadGuard, OwnedRwLockWriteGuard, RwLock};
 use tokio_util::io::ReaderStream;
 
@@ -151,7 +152,6 @@ pub async fn can_manage_problem(user: &LoginedUser, pid: &Pid) -> Result<bool, S
 
 use axum::extract::{Extension, Multipart, Path};
 use shared::user::LoginedUser;
-use std::sync::OnceLock;
 pub async fn commit_problem_files(
     Extension(login): Extension<Option<LoginedUser>>,
     Path(pid): Path<Pid>,
@@ -162,23 +162,134 @@ pub async fn commit_problem_files(
     if !can_manage_problem(&login, &pid).await? {
         return Err(ServerError::Fuck);
     }
-    // let mut meta = OnceLock::new();
-    while let Some(field) = multipart
+    let mut problem_files = get_problem(&pid)
+        .await?
+        .files
+        .iter()
+        .map(Clone::clone)
+        .map(|x| (x.path.clone(), x))
+        .collect::<HashMap<_, _>>();
+
+    let mut meta = None;
+    let mut upload = Vec::new();
+    while let Some(mut field) = multipart
         .next_field()
         .await
         .map_err(|_| ServerError::Network)?
     {
-        tracing::trace!("name {:?} file {:?}", field.name(), field.file_name());
-        // let name = field.name().ok_or(ServerError::Fuck)?;
-        // if name == "meta" {
-        //     let json = field.text().await.unwrap();
-        //     let value: Vec<FileChangeEvent> =
-        //         serde_json::from_str(&json).map_err(|_| ServerError::Fuck)?;
-        //     meta.set(Arc::new(value)).unwrap();
-        // } else if name == "file" {
-        // } else {
-        //     return Err(ServerError::Fuck);
-        // }
+        let name = field.name().ok_or(ServerError::Fuck)?;
+        if name == "meta" {
+            let json = field.text().await.map_err(|_| ServerError::Fuck)?;
+            let value: FileChangeMeta =
+                serde_json::from_str(&json).map_err(|_| ServerError::Fuck)?;
+            meta = Some(value);
+        } else if name == "file" {
+            let index: usize = field
+                .file_name()
+                .ok_or(ServerError::Fuck)?
+                .parse()
+                .map_err(|_| ServerError::Fuck)?;
+            let (file, path) = tokio::task::spawn_blocking(|| {
+                let t = tempfile::NamedTempFile::new()
+                    .map_err(ServerError::into_internal)?
+                    .into_parts();
+                Ok(t)
+            })
+            .await
+            .unwrap()?;
+
+            tracing::trace!("writing {} to {}", index, path.display());
+
+            let file = tokio::fs::File::from_std(file);
+            let mut writer = tokio::io::BufWriter::new(file);
+            while let Some(chunk) = field.chunk().await.map_err(ServerError::into_internal)? {
+                writer
+                    .write_all(&chunk)
+                    .await
+                    .map_err(ServerError::into_internal)?;
+            }
+            upload.push((index, path));
+        } else {
+            return Err(ServerError::Fuck);
+        }
     }
+
+    upload.sort_unstable_by_key(|x| x.0);
+
+    if upload.iter().enumerate().any(|(x, y)| x != y.0) {
+        return Err(ServerError::Fuck);
+    }
+
+    let meta = meta.ok_or(ServerError::Fuck)?;
+
+    tokio::spawn(async move {
+        let lock = problem_write_lock(&pid).await;
+        let mut upload = upload.into_iter();
+        for evt in meta.evts {
+            use FileChangeEvent::*;
+            match evt {
+                SetPriv(path) => {
+                    let f = problem_files.get_mut(&path).ok_or(ServerError::Fuck)?;
+                    if !f.is_public {
+                        return Err(ServerError::Fuck);
+                    }
+                    f.is_public = false;
+                }
+                SetPub(path) => {
+                    let f = problem_files.get_mut(&path).ok_or(ServerError::Fuck)?;
+                    if f.is_public {
+                        return Err(ServerError::Fuck);
+                    }
+                    f.is_public = true;
+                }
+                Remove(path) => {
+                    let _ = problem_files.remove(&path).ok_or(ServerError::Fuck)?;
+                    let path = problem_file_path(&pid, &path);
+                    tracing::trace!("remove {}", path.display());
+                    fs::remove_file(&path)
+                        .await
+                        .map_err(ServerError::into_internal)?;
+                }
+                Upload { path, time, size } => {
+                    if problem_files.contains_key(&path) {
+                        let file = problem_files.get_mut(&path).unwrap();
+                        file.last_modified = time;
+                        file.size = size;
+                    } else {
+                        problem_files.insert(
+                            path.clone(),
+                            ProblemFile {
+                                path: path.clone(),
+                                uuid: uuid::Uuid::new_v4(),
+                                is_public: false,
+                                size,
+                                last_modified: time,
+                            },
+                        );
+                    }
+                    let to = problem_file_path(&pid, &path);
+                    let (_, tmp) = upload.next().ok_or(ServerError::Fuck)?;
+                    tracing::trace!("move {} to {}", tmp.display(), to.display());
+                    tokio::fs::copy(&tmp, &to)
+                        .await
+                        .map_err(ServerError::into_internal)?;
+                    tokio::task::spawn_blocking(move || tmp.close())
+                        .await
+                        .unwrap()
+                        .map_err(ServerError::into_internal)?;
+                }
+            }
+        }
+
+        let mut problem = get_problem(&pid).await?.as_ref().clone();
+        problem.files = problem_files.into_iter().map(|x| x.1).collect();
+        set_problem(&pid, Arc::new(problem)).await?;
+
+        drop(lock);
+        Ok::<(), ServerError>(())
+    })
+    .await
+    .unwrap()?;
+
     Ok(())
 }

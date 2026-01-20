@@ -10,6 +10,7 @@ use web_sys::FormData;
 struct UploadedFile {
     path: CompactString,
     content: Bytes,
+    time: i64,
 }
 
 impl std::fmt::Debug for UploadedFile {
@@ -82,11 +83,19 @@ async fn commit_files(mut evt_groups: Signal<Vec<EventGroup>>) -> eyre::Result<(
             let t = match e {
                 Update(file) => {
                     to_upload.push(file.clone());
-                    FileChangeEvent::Upload(file.path.clone())
+                    FileChangeEvent::Upload {
+                        path: file.path.clone(),
+                        time: file.time,
+                        size: file.content.len() as u64,
+                    }
                 }
                 New(file) => {
                     to_upload.push(file.clone());
-                    FileChangeEvent::Upload(file.path.clone())
+                    FileChangeEvent::Upload {
+                        path: file.path.clone(),
+                        time: file.time,
+                        size: file.content.len() as u64,
+                    }
                 }
                 SetPriv(path) => FileChangeEvent::SetPriv(path.clone()),
                 SetPub(path) => FileChangeEvent::SetPub(path.clone()),
@@ -95,12 +104,13 @@ async fn commit_files(mut evt_groups: Signal<Vec<EventGroup>>) -> eyre::Result<(
             events.push(t);
         }
     }
-    form.append_with_str("meta", &serde_json::to_string(&events).unwrap())
+    let meta = FileChangeMeta { evts: events };
+    form.append_with_str("meta", &serde_json::to_string(&meta).unwrap())
         .unwrap();
-    for file in to_upload {
+    for (index, file) in to_upload.into_iter().enumerate() {
         let array = Uint8Array::new_from_slice(&file.content);
         let blob = Blob::new_with_u8_array_sequence(array.as_ref()).unwrap();
-        form.append_with_blob_and_filename("file", &blob, &file.path)
+        form.append_with_blob_and_filename("file", &blob, &index.to_string())
             .unwrap();
     }
     let token = storage()
@@ -187,6 +197,7 @@ fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Elem
                                 uploaded
                                     .push(UploadedFile {
                                         path: meta.name().into(),
+                                        time:now(),
                                         content,
                                     });
                             }
@@ -240,15 +251,14 @@ fn render_files_view(
         let snapshot = files.clone();
         let mut group = Vec::with_capacity(uploaded.len());
         for new_file in uploaded {
-            let time = web_sys::js_sys::Date::now() / 1000.;
             let size = new_file.content.len() as u64;
-            let last_modified = time as i64;
             let path = new_file.path.clone();
+            let time = new_file.time;
             let Some(old) = files.iter_mut().filter(|d| d.path == path).next() else {
                 files.push(EditingProblemFile {
                     is_public: false,
                     size,
-                    last_modified,
+                    last_modified: time,
                     path,
                     state: FileState::New,
                     is_selected: false,
@@ -259,7 +269,7 @@ fn render_files_view(
             *old = EditingProblemFile {
                 path,
                 size,
-                last_modified,
+                last_modified: time,
                 state: FileState::Changed,
                 ..*old
             };
