@@ -181,7 +181,7 @@ fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Elem
                 button {
                     onclick: move |_| {
                         spawn(async move {
-                            let mut signal_selected=selected;
+                            let mut signal_selected = selected;
                             let selected = signal_selected.read();
                             let files = selected.iter().map(|f| f.read_bytes());
                             let files = futures_util::future::join_all(files).await;
@@ -197,7 +197,7 @@ fn upload_files(show: Signal<bool>, uploaded: Signal<Vec<UploadedFile>>) -> Elem
                                 uploaded
                                     .push(UploadedFile {
                                         path: meta.name().into(),
-                                        time:now(),
+                                        time: now(),
                                         content,
                                     });
                             }
@@ -559,64 +559,54 @@ fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element {
 #[component]
 pub fn ProblemEdit(pid: Pid) -> Element {
     use_context_provider(|| pid.clone());
-    let mut fetched = use_signal(|| false);
     let mut editable = use_signal(|| None);
     let mut files = use_signal(|| None);
     let evt_groups = use_signal(Vec::new);
-    {
-        let pid = pid.clone();
-        use_future(move || {
-            let pid = pid.clone();
-            async move {
-                let editable = async {
-                    let editable_val: ProblemEditable =
-                        send_message(FrontMessage::GetProblemEditable(pid.clone()))
-                            .await
-                            .unwrap();
-                    editable.set(editable_val.into());
-                };
-                let files = async {
-                    let files_val: Vec<ProblemFile> =
-                        send_message(FrontMessage::GetProblemFiles(pid.clone()))
-                            .await
-                            .unwrap();
-                    files.set(Some(
-                        files_val
-                            .into_iter()
-                            .map(
-                                |ProblemFile {
-                                     path,
-                                     uuid: _,
-                                     is_public,
-                                     size,
-                                     last_modified,
-                                 }| EditingProblemFile {
-                                    is_public,
-                                    path,
-                                    size,
-                                    last_modified,
-                                    state: FileState::Unchanged,
-                                    is_selected: false,
-                                },
-                            )
-                            .collect::<Vec<_>>(),
-                    ));
-                };
-                futures_util::join!(editable, files);
-                fetched.set(true);
-            }
-        })
-    };
+    let pid = use_signal(|| pid);
+    use_future({
+        move || async move {
+            let editable_val: ProblemEditable =
+                send_message(FrontMessage::GetProblemEditable(pid()))
+                    .await
+                    .unwrap();
+            editable.set(editable_val.into());
+        }
+    });
+    use_future(move || async move {
+        let files_val: Vec<ProblemFile> = send_message(FrontMessage::GetProblemFiles(pid()))
+            .await
+            .unwrap();
+        files.set(Some(
+            files_val
+                .into_iter()
+                .map(
+                    |ProblemFile {
+                         path,
+                         uuid: _,
+                         is_public,
+                         size,
+                         last_modified,
+                     }| EditingProblemFile {
+                        is_public,
+                        path,
+                        size,
+                        last_modified,
+                        state: FileState::Unchanged,
+                        is_selected: false,
+                    },
+                )
+                .collect::<Vec<_>>(),
+        ));
+    });
     rsx! {
         {
-            let pid = pid.0.as_str();
             rsx! {
                 h2 { "Edit {pid}" }
                 hr {}
             }
         }
         {
-            if fetched.cloned() {
+            if files.as_ref().is_some() && editable.as_ref().is_some() {
                 rsx! {
                     render_editable { editable }
                     hr {}
