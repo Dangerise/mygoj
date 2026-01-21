@@ -1,12 +1,12 @@
 use super::*;
 use axum::Router;
-use axum::http::{HeaderName, StatusCode, header::*};
+use axum::http::{HeaderName, Request, StatusCode, header::*};
 use axum::routing::{any, get};
 use std::time::Duration;
 use tower_http::cors::CorsLayer;
 use tower_http::request_id::{MakeRequestUuid, SetRequestIdLayer};
 use tower_http::timeout::TimeoutLayer;
-use tower_http::trace::{DefaultMakeSpan, TraceLayer};
+use tower_http::trace::TraceLayer;
 
 pub async fn startup() {
     let path = storage_dir().join("data.db");
@@ -16,13 +16,15 @@ pub async fn startup() {
     tokio::spawn(judge::track_judge_machines());
 }
 
+const X_REQUEST_ID: &str = "x-request-id";
+
 pub fn router() -> Router {
     let front = Router::new()
         .route("/assets/{*path}", get(front::assets))
         .route("/wasm/{*path}", get(front::wasm))
         .fallback(front::index);
 
-    let x_request_id = HeaderName::from_static("x-request-id");
+    let x_request_id = HeaderName::from_static(X_REQUEST_ID);
     let set_id = SetRequestIdLayer::new(x_request_id, MakeRequestUuid);
 
     let cors = CorsLayer::new()
@@ -36,11 +38,15 @@ pub fn router() -> Router {
     let timeout =
         TimeoutLayer::with_status_code(StatusCode::TOO_MANY_REQUESTS, Duration::from_secs(1));
 
-    let trace = TraceLayer::new_for_http().make_span_with(
-        DefaultMakeSpan::new()
-            .level(tracing::Level::TRACE)
-            .include_headers(true),
-    );
+    let trace = TraceLayer::new_for_http().make_span_with(|request: &Request<_>| {
+        let id = request
+            .headers()
+            .get(X_REQUEST_ID)
+            .unwrap()
+            .to_str()
+            .unwrap();
+        tracing::trace_span!("", id = id)
+    });
 
     let front_api = Router::new()
         .route("/", any(front::receive_front_message))
