@@ -507,9 +507,9 @@ fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element {
     rsx! {
         label { "title" }
         input {
-            value: editable.read().as_ref().unwrap().title.clone(),
+            value: editable.read().as_ref().unwrap().title.clone().as_str(),
             onchange: move |evt| {
-                editable.write().as_mut().unwrap().title = evt.value();
+                editable.write().as_mut().unwrap().title = evt.value().into();
             },
         }
         label { "time_limit (ms)" }
@@ -550,7 +550,7 @@ fn render_editable(mut editable: Signal<Option<ProblemEditable>>) -> Element {
         textarea {
             value: editable.read().as_ref().unwrap().statement.clone(),
             onchange: move |evt| {
-                editable.write().as_mut().unwrap().title = evt.value();
+                editable.write().as_mut().unwrap().statement = evt.value();
             },
         }
     }

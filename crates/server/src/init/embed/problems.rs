@@ -10,11 +10,11 @@ impl EmbedProblem for ComplexFs {
             pid: Pid::new("2"),
             owner: None,
             title: "complex_fs".into(),
-            statement: "none statment".into(),
+            statement: "none statment".to_string().into(),
             memory_limit: 2,
             time_limit: 100,
-            testcases: vec![],
-            files: vec![],
+            testcases: vec![].into(),
+            files: vec![].into(),
         }
     }
 }
@@ -29,7 +29,7 @@ impl EmbedProblem for ApB {
             pid: Pid::new("1"),
             owner: None,
             title: "A+B".into(),
-            statement: include_str!("a+b/statement.md").to_string(),
+            statement: include_str!("a+b/statement.md").to_string().into(),
             memory_limit: 512,
             time_limit: 1000,
             testcases: vec![
@@ -41,8 +41,9 @@ impl EmbedProblem for ApB {
                     input_file: "2.in".into(),
                     output_file: "2.out".into(),
                 },
-            ],
-            files: vec![],
+            ]
+            .into(),
+            files: vec![].into(),
         }
     }
 }
@@ -53,11 +54,12 @@ pub trait EmbedProblem: RustEmbed {
 
 pub fn generate<P: EmbedProblem>() -> Problem {
     let mut base = P::base();
+    let mut files = Vec::new();
     for file in P::iter() {
         let file = &*file;
         let inner = P::get(file).unwrap();
         let size = inner.data.len() as u64;
-        base.files.push(ProblemFile {
+        files.push(ProblemFile {
             path: file.into(),
             uuid: Uuid::new_v4(),
             last_modified: inner.metadata.last_modified().unwrap() as i64,
@@ -65,6 +67,7 @@ pub fn generate<P: EmbedProblem>() -> Problem {
             is_public: false,
         });
     }
+    base.files = files.into();
     base
 }
 

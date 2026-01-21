@@ -9,7 +9,7 @@ pub struct Pid(pub CompactString);
 pub struct ProblemFront {
     pub pid: Pid,
     pub owner: Option<Uid>,
-    pub title: String,
+    pub title: CompactString,
     pub statement: String,
     pub time_limit: u32,
     pub memory_limit: u32,
@@ -44,7 +44,7 @@ pub struct ProblemData {
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProblemEditable {
     pub owner: Option<Uid>,
-    pub title: String,
+    pub title: CompactString,
     pub statement: String,
     pub time_limit: u32,
     pub memory_limit: u32,

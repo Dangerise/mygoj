@@ -2,6 +2,7 @@ mod cache;
 mod db;
 
 use super::ServerError;
+use compact_str::CompactString;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
 pub use shared::problem::*;
@@ -22,12 +23,12 @@ static PROBLEM_LOCKS: DashMap<Pid, Arc<RwLock<()>>> = DashMap::new();
 pub struct Problem {
     pub pid: Pid,
     pub owner: Option<Uid>,
-    pub title: String,
-    pub statement: String,
+    pub title: CompactString,
+    pub statement: Arc<String>,
     pub memory_limit: u32,
     pub time_limit: u32,
-    pub testcases: Vec<Testcase>,
-    pub files: Vec<ProblemFile>,
+    pub testcases: Arc<Vec<Testcase>>,
+    pub files: Arc<Vec<ProblemFile>>,
 }
 
 pub async fn get_problem(pid: &Pid) -> Result<Arc<Problem>, ServerError> {
@@ -66,7 +67,7 @@ pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
 
     let front = ProblemFront {
         title: problem.title.clone(),
-        statement: problem.statement.clone(),
+        statement: (*problem.statement).clone(),
         time_limit: problem.time_limit,
         memory_limit: problem.memory_limit,
         owner: problem.owner,
@@ -106,8 +107,8 @@ pub async fn problem_data(pid: Pid) -> Result<ProblemData, ServerError> {
     let problem = get_problem(&pid).await?;
     let data = ProblemData {
         pid,
-        files: problem.files.clone(),
-        testcases: problem.testcases.clone(),
+        files: (*problem.files).clone(),
+        testcases: (*problem.testcases).clone(),
         time_limit: problem.time_limit,
         memory_limit: problem.memory_limit,
     };
@@ -281,8 +282,9 @@ pub async fn commit_problem_files(
             }
         }
 
+        let problem_files = Arc::new(problem_files.into_iter().map(|x| x.1).collect());
         let mut problem = get_problem(&pid).await?.as_ref().clone();
-        problem.files = problem_files.into_iter().map(|x| x.1).collect();
+        problem.files = problem_files;
         set_problem(&pid, Arc::new(problem)).await?;
 
         drop(lock);
