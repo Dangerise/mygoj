@@ -57,12 +57,12 @@ pub fn router() -> Router {
         )
         .layer(axum::middleware::from_fn(front::logined_user_layer))
         .route("/login", any(front::login))
-        .route("/logout", any(front::logout))
-        .layer(trace);
+        .route("/logout", any(front::logout));
 
     let api = Router::new()
         .route("/judge", any(judge::receive_message))
         .nest("/front", front_api)
+        .layer(trace)
         .layer(cors);
 
     front.nest("/api", api).layer(set_id).layer(timeout)
