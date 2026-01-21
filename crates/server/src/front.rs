@@ -1,8 +1,8 @@
-use super::ServerError;
 use super::judge::judge_machines;
 use super::problem::{can_manage_problem, get_problem, get_problem_editable, get_problem_front};
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
+use super::{Fuck, ServerError};
 use rust_embed::RustEmbed;
 use shared::front::FrontMessage;
 use shared::problem::Pid;
@@ -83,7 +83,7 @@ pub async fn logined_user_layer(
 ) -> Result<Response, ServerError> {
     let login = if let Some(auth) = auth {
         let token = auth.token();
-        let token = Token::decode(token.as_bytes()).ok_or(ServerError::Fuck)?;
+        let token = Token::decode(token.as_bytes()).fuck()?;
         let login = get_user_login(token).await?;
         Some(login)
     } else {
@@ -108,7 +108,7 @@ pub async fn login(
 pub async fn logout(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
 ) -> Result<(), ServerError> {
-    let token = Token::decode(auth.token().as_bytes()).ok_or(ServerError::Fuck)?;
+    let token = Token::decode(auth.token().as_bytes()).fuck()?;
     remove_token(token).await?;
     Ok(())
 }
@@ -156,7 +156,7 @@ pub async fn receive_front_message(
             to_json(&rec)
         }
         FrontMessage::Submit(submission) => {
-            let uid = logined_user.map(|x| x.uid).ok_or(ServerError::Fuck)?;
+            let uid = logined_user.map(|x| x.uid).fuck()?;
             let rid = tokio::spawn(submit(uid, submission)).await.unwrap()?;
             to_json(rid)
         }

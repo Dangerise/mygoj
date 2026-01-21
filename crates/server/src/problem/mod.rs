@@ -1,7 +1,7 @@
 mod cache;
 mod db;
 
-use super::ServerError;
+use super::{Fuck, ServerError};
 use compact_str::CompactString;
 use dashmap::DashMap;
 use serde::{Deserialize, Serialize};
@@ -158,7 +158,7 @@ pub async fn commit_problem_files(
     Path(pid): Path<Pid>,
     mut multipart: Multipart,
 ) -> Result<(), ServerError> {
-    let login = login.ok_or(ServerError::Fuck)?;
+    let login = login.fuck()?;
     tracing::trace!("got");
     if !can_manage_problem(&login, &pid).await? {
         return Err(ServerError::Fuck);
@@ -178,18 +178,18 @@ pub async fn commit_problem_files(
         .await
         .map_err(|_| ServerError::Network)?
     {
-        let name = field.name().ok_or(ServerError::Fuck)?;
+        let name = field.name().fuck()?;
         if name == "meta" {
-            let json = field.text().await.map_err(|_| ServerError::Fuck)?;
+            let json = field.text().await.fuck()?;
             let value: FileChangeMeta =
-                serde_json::from_str(&json).map_err(|_| ServerError::Fuck)?;
+                serde_json::from_str(&json).fuck()?;
             meta = Some(value);
         } else if name == "file" {
             let index: usize = field
                 .file_name()
-                .ok_or(ServerError::Fuck)?
+                .fuck()?
                 .parse()
-                .map_err(|_| ServerError::Fuck)?;
+                .fuck()?;
             let (file, path) = tokio::task::spawn_blocking(|| {
                 let t = tempfile::NamedTempFile::new()
                     .map_err(ServerError::into_internal)?
@@ -221,7 +221,7 @@ pub async fn commit_problem_files(
         return Err(ServerError::Fuck);
     }
 
-    let meta = meta.ok_or(ServerError::Fuck)?;
+    let meta = meta.fuck()?;
 
     tokio::spawn(async move {
         let lock = problem_write_lock(&pid).await;
@@ -230,21 +230,21 @@ pub async fn commit_problem_files(
             use FileChangeEvent::*;
             match evt {
                 SetPriv(path) => {
-                    let f = problem_files.get_mut(&path).ok_or(ServerError::Fuck)?;
+                    let f = problem_files.get_mut(&path).fuck()?;
                     if !f.is_public {
                         return Err(ServerError::Fuck);
                     }
                     f.is_public = false;
                 }
                 SetPub(path) => {
-                    let f = problem_files.get_mut(&path).ok_or(ServerError::Fuck)?;
+                    let f = problem_files.get_mut(&path).fuck()?;
                     if f.is_public {
                         return Err(ServerError::Fuck);
                     }
                     f.is_public = true;
                 }
                 Remove(path) => {
-                    let _ = problem_files.remove(&path).ok_or(ServerError::Fuck)?;
+                    let _ = problem_files.remove(&path).fuck()?;
                     let path = problem_file_path(&pid, &path);
                     tracing::trace!("remove {}", path.display());
                     fs::remove_file(&path)
@@ -269,7 +269,7 @@ pub async fn commit_problem_files(
                         );
                     }
                     let to = problem_file_path(&pid, &path);
-                    let (_, tmp) = upload.next().ok_or(ServerError::Fuck)?;
+                    let (_, tmp) = upload.next().fuck()?;
                     tracing::trace!("move {} to {}", tmp.display(), to.display());
                     tokio::fs::copy(&tmp, &to)
                         .await
