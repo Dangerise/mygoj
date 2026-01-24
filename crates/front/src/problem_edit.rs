@@ -4,7 +4,7 @@ use compact_str::CompactString;
 use dioxus::html::FileData;
 use shared::problem::*;
 use utility::loading_page;
-use web_sys::FormData;
+use web_sys::{FormData, js_sys};
 
 #[derive(Clone, PartialEq)]
 struct UploadedFile {
@@ -108,7 +108,9 @@ async fn commit_files(mut evt_groups: Signal<Vec<EventGroup>>) -> eyre::Result<(
     form.append_with_str("meta", &serde_json::to_string(&meta).unwrap())
         .unwrap();
     for (index, file) in to_upload.into_iter().enumerate() {
-        let array = Uint8Array::new_from_slice(&file.content);
+        let bytes = Uint8Array::new_from_slice(&file.content);
+        let array = js_sys::Array::new();
+        array.push(&bytes);
         let blob = Blob::new_with_u8_array_sequence(array.as_ref()).unwrap();
         form.append_with_blob_and_filename("file", &blob, &index.to_string())
             .unwrap();

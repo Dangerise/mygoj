@@ -23,11 +23,6 @@ pub async fn init_fs(path: impl AsRef<Path>) -> eyre::Result<()> {
     }
     fs::create_dir_all(path).await?;
 
-    #[cfg(debug_assertions)]
-    {
-        embed::with_fs(path).await?;
-    }
-
     Ok(())
 }
 
@@ -55,8 +50,14 @@ pub async fn init_db(path: impl AsRef<Path>) -> eyre::Result<()> {
 
     #[cfg(debug_assertions)]
     {
-        embed::with_db().await?;
+        embed::users().await?;
     }
 
+    Ok(())
+}
+
+pub async fn init_problems(path: impl AsRef<Path>) -> eyre::Result<()> {
+    let path = path.as_ref();
+    embed::problems(&*path).await?;
     Ok(())
 }

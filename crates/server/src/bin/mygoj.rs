@@ -31,6 +31,7 @@ impl Init {
         init::init_fs(storage_dir()).await.unwrap();
         let db = storage_dir().join("data.db");
         init::init_db(&db).await.unwrap();
+        init::init_problems(storage_dir().join("problems")).await.unwrap();
     }
 }
 

@@ -53,7 +53,7 @@ pub fn router() -> Router {
         .route("/record_ws", any(record::ws))
         .route(
             "/commit_problem_files/{pid}",
-            any(problem::commit_problem_files),
+            any(problem::files::commit_problem_files),
         )
         .layer(axum::middleware::from_fn(front::logined_user_layer))
         .route("/login", any(front::login))

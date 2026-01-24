@@ -1,6 +1,25 @@
 use super::*;
 
 #[derive(RustEmbed)]
+#[folder = "src/init/embed/simple_fs"]
+pub struct SimpleFs;
+
+impl EmbedProblem for SimpleFs {
+    fn base() -> Problem {
+        Problem {
+            pid: Pid::new("3"),
+            owner: None,
+            title: "simple_fs".into(),
+            statement: "the statement of simplefs".to_string().into(),
+            memory_limit: 0,
+            time_limit: 0,
+            testcases: vec![].into(),
+            files: vec![].into(),
+        }
+    }
+}
+
+#[derive(RustEmbed)]
 #[folder = "src/init/embed/complex_fs"]
 pub struct ComplexFs;
 
@@ -52,6 +71,14 @@ pub trait EmbedProblem: RustEmbed {
     fn base() -> Problem;
 }
 
+pub async fn embed_problem<P: EmbedProblem>(path: &Path) -> eyre::Result<()> {
+    let p = generate::<P>();
+    let db = DB.get().unwrap();
+    p.insert_db(db).await?;
+    write_fs::<P>(&path.join(p.pid.0.as_str()), &p).await?;
+    Ok(())
+}
+
 pub fn generate<P: EmbedProblem>() -> Problem {
     let mut base = P::base();
     let mut files = Vec::new();
@@ -71,19 +98,24 @@ pub fn generate<P: EmbedProblem>() -> Problem {
     base
 }
 
-pub async fn write_fs<P: EmbedProblem>(path: &Path) -> eyre::Result<()> {
-    let dir = path.join("problems").join(P::base().pid.0);
+pub async fn write_fs<P: EmbedProblem>(path: &Path, g: &Problem) -> eyre::Result<()> {
+    let dir = path;
     if !fs::try_exists(&dir).await? {
         fs::create_dir_all(&dir).await?;
     }
+    let files = &g.files;
     for filename in P::iter() {
-        let path = dir.join(&*filename);
+        let uuid = files
+            .iter()
+            .find_map(|d| (d.path == filename).then_some(d.uuid))
+            .unwrap();
+        let path = dir.join(uuid.to_string());
         if let Some(parent) = path.parent() {
             fs::create_dir_all(parent).await?;
         }
         let content = &*P::get(&filename).unwrap().data;
         fs::write(&path, content).await?;
-        tracing::trace!("write problem file {}", path.display());
+        tracing::trace!("write problem file {} {}", filename, path.display());
     }
     Ok(())
 }
