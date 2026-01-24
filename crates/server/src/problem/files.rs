@@ -14,16 +14,16 @@ pub async fn clean_unused_problem_files(pid: &Pid) -> Result<u64, ServerError> {
         .map_err(ServerError::into_internal)?
     {
         let filename = entry.file_name();
-        let should_clean = || {
+        let should_clean = 'tag: {
             let Ok(filename) = str::from_utf8(filename.as_encoded_bytes()) else {
-                return true;
+                break 'tag true;
             };
             let Ok(uuid) = filename.parse::<Uuid>() else {
-                return true;
+                break 'tag true;
             };
             files.iter().find(|d| d.uuid == uuid).is_none()
         };
-        if should_clean() {
+        if should_clean {
             tracing::debug!("clean {}", filename.display());
             joinset.spawn(fs::remove_file(storage.join(filename)));
         }
