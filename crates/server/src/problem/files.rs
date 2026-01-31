@@ -1,5 +1,24 @@
 use super::*;
 
+pub async fn can_access_problem_file(
+    user: &Option<LoginedUser>,
+    pid: &Pid,
+    path: &str,
+) -> Result<bool, ServerError> {
+    let problem = get_problem(pid).await?;
+    let file = problem
+        .files
+        .iter()
+        .find(|d| d.path == path)
+        .ok_or(ServerError::NotFound)?;
+    let mut ret = file.is_public;
+    if let Some(user) = user.as_ref() {
+        ret |= user.privilege.edit_problems;
+        ret |= Some(user.uid) == problem.owner;
+    }
+    Ok(ret)
+}
+
 pub async fn clean_unused_problem_files(pid: &Pid) -> Result<u64, ServerError> {
     let lock = problem_write_lock(pid).await;
     let files = get_problem(pid).await?.files.clone();
@@ -178,4 +197,24 @@ pub async fn commit_problem_files(
     .unwrap()?;
 
     Ok(())
+}
+
+use axum::response::IntoResponse;
+use axum_extra::response::FileStream;
+use tokio_util::io::ReaderStream;
+pub async fn file_download(
+    Extension(login): Extension<Option<LoginedUser>>,
+    Path((pid, path)): Path<(Pid, String)>,
+) -> Result<impl IntoResponse, ServerError> {
+    let path = path.as_str();
+    if !can_access_problem_file(&login, &pid, path).await? {
+        return Err(ServerError::NoPrivilege);
+    }
+    let file = get_problem_file(&pid, path).await?;
+    let file = fs::File::open(file)
+        .await
+        .map_err(ServerError::into_internal)?;
+    let stream = ReaderStream::new(file);
+    let stream = FileStream::new(stream).file_name(path);
+    Ok(stream)
 }

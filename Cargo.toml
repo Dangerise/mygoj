@@ -12,6 +12,7 @@ members = [
 axum = { version = "0.8.7", features = ["macros", "multipart", "ws"] }
 axum-extra = { version = "0.12.2", features = [
   "async-read-body",
+  "file-stream",
   "query",
   "typed-header"
 ] }
