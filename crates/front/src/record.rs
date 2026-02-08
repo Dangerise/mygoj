@@ -144,9 +144,9 @@ mod inner {
             let done = t.status.done();
             record.set(Some(t));
             if !done {
-                #[cfg(feature = "ws_for_record")]
+                #[cfg(feature = "ws")]
                 ws(rid, record.clone()).await;
-                #[cfg(not(feature = "ws_for_record"))]
+                #[cfg(not(feature = "ws"))]
                 manual_refresh(rid, record).await;
             }
             ()

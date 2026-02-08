@@ -6,14 +6,15 @@ edition = "2024"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+bytes.workspace = true
 compact_str.workspace = true
 dioxus = { version = "0.7.2", features = ["router", "web"] }
 dioxus-primitives = { git = "https://github.com/DioxusLabs/components", version = "0.0.1", default-features = false }
 eyre.workspace = true
 futures-util.workspace = true
-bytes.workspace=true
 getrandom = { workspace = true, features = ["wasm_js"] }
 gloo = "0.11.0"
+human_bytes = { version = "0.4.3", features = ["si-units"] }
 itertools.workspace = true
 markdown = "1.0.0"
 pharos = "0.5.3"
@@ -26,14 +27,14 @@ uuid = { workspace = true, features = ["js"] }
 wasm-bindgen-futures = "0.4.56"
 web-sys = { version = "0.3.83", features = [
   "Clipboard",
+  "FormData",
   "Navigator",
   "Storage",
-  "Window",
-  "FormData"
+  "Window"
 ] }
 ws_stream_wasm = "0.7.5"
-human_bytes = { version = "0.4.3", features = ["si-units"] }
 
 [features]
+default = ["ws"]
 independent = []
-ws_for_record = []
+ws = []
