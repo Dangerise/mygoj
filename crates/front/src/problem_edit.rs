@@ -236,6 +236,7 @@ fn render_files_view(
     mut files: Signal<Option<Vec<EditingProblemFile>>>,
     mut evt_groups: Signal<Vec<EventGroup>>,
 ) -> Element {
+    let pid: Pid = use_context();
     let mut add_group = move |snapshot, evts: Vec<_>| {
         if !evts.is_empty() {
             evt_groups.push(EventGroup { evts, snapshot });
@@ -354,6 +355,22 @@ fn render_files_view(
                             {if file.is_public { "pub" } else { "priv" }}
                             {"    "}
                             render_file_state { state: file.state }
+                            {"    "}
+
+
+                            button {
+                                onclick: {
+                                    let pid = pid.clone();
+                                    let path = file.path.clone();
+                                    move |_| {
+                                        web_sys::window()
+                                            .unwrap()
+                                            .open_with_url(&format!("/problem/{}/file_download/{}", pid, path))
+                                            .unwrap();
+                                    }
+                                },
+                                "download"
+                            }
                         }
                     }
                 }

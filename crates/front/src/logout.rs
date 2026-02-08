@@ -8,8 +8,7 @@ pub fn clear_cache() {
 }
 
 async fn logout() -> eyre::Result<()> {
-    let storage = storage();
-    let Some(token) = storage.get(shared::constant::LOGIN_TOKEN).unwrap() else {
+    let Some(token) = login_token() else {
         return Ok(());
     };
 
@@ -19,7 +18,7 @@ async fn logout() -> eyre::Result<()> {
         .send()
         .await?;
 
-    storage.remove_item(shared::constant::LOGIN_TOKEN).unwrap();
+    remove_login_token();
 
     if resp.status() != StatusCode::OK {
         let err: ServerError = resp.json().await?;

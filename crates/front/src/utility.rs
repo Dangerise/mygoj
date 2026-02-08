@@ -1,4 +1,5 @@
 use super::*;
+use shared::token::Token;
 
 pub fn now() -> i64 {
     (web_sys::js_sys::Date::now() / 1000.) as i64
@@ -7,6 +8,18 @@ pub fn now() -> i64 {
 #[track_caller]
 pub fn storage() -> web_sys::Storage {
     web_sys::window().unwrap().local_storage().unwrap().unwrap()
+}
+
+#[track_caller]
+pub fn login_token() -> Option<String> {
+    storage().get(shared::constant::LOGIN_TOKEN).unwrap()
+}
+
+#[track_caller]
+pub fn remove_login_token() {
+    storage()
+        .remove_item(shared::constant::LOGIN_TOKEN)
+        .unwrap()
 }
 
 pub fn ws_origin() -> String {
@@ -57,13 +70,10 @@ pub async fn send_message<T>(msg: FrontMessage) -> eyre::Result<T>
 where
     T: DeserializeOwned,
 {
-    let storage = storage();
-    let token = storage.get(shared::constant::LOGIN_TOKEN).unwrap();
-
     let mut req = reqwest::Client::new()
         .post(format!("{}/api/front", *SERVER_URL))
         .json(&msg);
-    if let Some(token) = token {
+    if let Some(token) = login_token() {
         req = req.bearer_auth(token);
     }
     let resp = req.send().await?;

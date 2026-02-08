@@ -199,18 +199,61 @@ pub async fn commit_problem_files(
     Ok(())
 }
 
+use shared::download::DownloadToken;
+
+#[derive(Debug)]
+struct DownloadTokenInfo {
+    pid: Pid,
+    path: CompactString,
+}
+
+#[dynamic]
+static DOWNLOAD_TOKENS: DashMap<DownloadToken, DownloadTokenInfo> = DashMap::new();
+
+use axum::extract::Query;
 use axum::response::IntoResponse;
 use axum_extra::response::FileStream;
 use tokio_util::io::ReaderStream;
+
+pub async fn require_problem_file_download_token(
+    login: Option<LoginedUser>,
+    pid: Pid,
+    path: CompactString,
+) -> Result<DownloadToken, ServerError> {
+    if can_access_problem_file(&login, &pid, &path).await? {
+        let token = DownloadToken::new();
+        let info = DownloadTokenInfo { pid, path };
+        DOWNLOAD_TOKENS.insert(token, info);
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_mins(1)).await;
+            DOWNLOAD_TOKENS.remove(&token);
+        });
+        Ok(token)
+    } else {
+        Err(ServerError::NoPrivilege)
+    }
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct DownloadQuery {
+    token: DownloadToken,
+}
+
 pub async fn file_download(
     Extension(login): Extension<Option<LoginedUser>>,
-    Path((pid, path)): Path<(Pid, String)>,
+    Path((pid, path)): Path<(Pid, CompactString)>,
+    Query(DownloadQuery { token }): Query<DownloadQuery>,
 ) -> Result<impl IntoResponse, ServerError> {
-    let path = path.as_str();
-    if !can_access_problem_file(&login, &pid, path).await? {
-        return Err(ServerError::NoPrivilege);
-    }
-    let file = get_problem_file(&pid, path).await?;
+    if let Some((_, info)) = DOWNLOAD_TOKENS.remove(&token) {
+        if info.path != path || info.pid != pid {
+            return Err(ServerError::Fuck);
+        }
+    } else {
+        if !can_access_problem_file(&login, &pid, &path).await? {
+            return Err(ServerError::NoPrivilege);
+        }
+    };
+    let file = get_problem_file(&pid, &path).await?;
     let file = fs::File::open(file)
         .await
         .map_err(ServerError::into_internal)?;

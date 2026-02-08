@@ -9,6 +9,7 @@ pub mod record;
 pub mod submission;
 pub mod token;
 pub mod user;
+pub mod download;
 
 // use token::*;
 use judge::*;

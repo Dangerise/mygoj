@@ -21,6 +21,7 @@ mod navbar;
 mod notfound;
 mod problem;
 mod problem_edit;
+mod problem_file_download;
 mod record;
 mod register;
 mod submit;
@@ -68,6 +69,8 @@ enum Route {
     Logout {},
     #[route("/problem/:pid/edit")]
     ProblemEdit { pid: Pid },
+    #[route("/problem/:pid/file_download/:path")]
+    ProblemFileDownload { pid: Pid, path: String },
 }
 
 use home::Home;
@@ -79,6 +82,7 @@ use navbar::Navbar;
 use notfound::NotFound;
 use problem::Problem;
 use problem_edit::ProblemEdit;
+use problem_file_download::ProblemFileDownload;
 use record::Record;
 use register::UserRegister;
 use submit::Submit;

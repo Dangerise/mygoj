@@ -1,5 +1,8 @@
 use super::judge::judge_machines;
-use super::problem::{can_manage_problem, get_problem, get_problem_editable, get_problem_front};
+use super::problem::{
+    can_manage_problem, files::require_problem_file_download_token, get_problem,
+    get_problem_editable, get_problem_front,
+};
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
 use super::{Fuck, ServerError};
@@ -165,5 +168,11 @@ pub async fn receive_front_message(
             to_json(uid)
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
+        FrontMessage::RequireProblemFileDownloadToken(pid, path) => {
+            let token = tokio::spawn(require_problem_file_download_token(logined_user, pid, path))
+                .await
+                .unwrap()?;
+            to_json(token)
+        }
     }
 }
