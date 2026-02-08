@@ -1,32 +1,22 @@
 use super::*;
-
-const TOKEN_LEN: usize = 10;
+use uuid::Uuid;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
-pub struct Token(pub [u8; TOKEN_LEN]);
+pub struct Token(Uuid);
 
 impl Token {
+    #[inline]
     pub fn new() -> Self {
-        Self([(); TOKEN_LEN].map(|_| rand::random()))
+        Self(Uuid::new_v4())
     }
 
-    pub fn decode(val: &[u8]) -> Option<Self> {
-        let bytes = hex::decode(val).ok()?;
-        if bytes.len() != TOKEN_LEN {
-            return None;
-        }
-        let mut val = [0; TOKEN_LEN];
-        val.copy_from_slice(&bytes);
-        Some(Self(val))
+    #[inline]
+    pub fn decode(input: &str) -> Option<Self> {
+        Some(Self(Uuid::parse_str(input).ok()?))
     }
 
+    #[inline]
     pub fn encode(&self) -> String {
-        hex::encode(self.0)
-    }
-}
-
-impl AsRef<[u8]> for Token {
-    fn as_ref(&self) -> &[u8] {
-        &self.0
+        self.0.to_string()
     }
 }

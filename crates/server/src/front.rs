@@ -83,7 +83,7 @@ pub async fn logined_user_layer(
 ) -> Result<Response, ServerError> {
     let login = if let Some(auth) = auth {
         let token = auth.token();
-        let token = Token::decode(token.as_bytes()).fuck()?;
+        let token = Token::decode(token).fuck()?;
         let login = get_user_login(token).await?;
         Some(login)
     } else {
@@ -108,7 +108,7 @@ pub async fn login(
 pub async fn logout(
     TypedHeader(auth): TypedHeader<Authorization<Bearer>>,
 ) -> Result<(), ServerError> {
-    let token = Token::decode(auth.token().as_bytes()).fuck()?;
+    let token = Token::decode(auth.token()).fuck()?;
     remove_token(token).await?;
     Ok(())
 }
