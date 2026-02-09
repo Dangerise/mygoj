@@ -3,10 +3,10 @@ use std::sync::Mutex;
 
 static RESOURCE: Mutex<String> = Mutex::new(String::new());
 
-pub fn notfound(url: String) {
-    *RESOURCE.lock().unwrap() = url;
-    navigator().push(Route::NotFound {});
-}
+// pub fn notfound(url: String) {
+//     *RESOURCE.lock().unwrap() = url;
+//     navigator().push(Route::NotFound {});
+// }
 
 #[component]
 pub fn NotFound() -> Element {

@@ -1,9 +1,9 @@
 use super::*;
 
-pub fn login_outdated() {
-    logout::clear_cache();
-    navigator().push(Route::LoginOutDated {});
-}
+// pub fn login_outdated() {
+//     logout::clear_cache();
+//     navigator().push(Route::LoginOutDated {});
+// }
 
 #[component]
 pub fn LoginOutDated() -> Element {

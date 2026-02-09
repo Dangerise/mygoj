@@ -122,19 +122,19 @@ mod inner {
         }
     }
 
-    async fn manual_refresh(rid: Rid, mut record: Signal<Option<Record>>) {
-        loop {
-            let Ok(t): Result<Record, _> = send_message(FrontMessage::GetRecord(rid)).await else {
-                return;
-            };
-            tracing::info!("udpate record {t:#?}");
-            let stop = t.status.done();
-            record.set(Some(t));
-            if stop {
-                return;
-            }
-        }
-    }
+    // async fn manual_refresh(rid: Rid, mut record: Signal<Option<Record>>) {
+    //     loop {
+    //         let Ok(t): Result<Record, _> = send_message(FrontMessage::GetRecord(rid)).await else {
+    //             return;
+    //         };
+    //         tracing::info!("udpate record {t:#?}");
+    //         let stop = t.status.done();
+    //         record.set(Some(t));
+    //         if stop {
+    //             return;
+    //         }
+    //     }
+    // }
 
     #[component]
     pub fn record_page(rid: Rid) -> Element {

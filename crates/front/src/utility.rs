@@ -1,5 +1,4 @@
 use super::*;
-use shared::token::Token;
 
 pub fn now() -> i64 {
     (web_sys::js_sys::Date::now() / 1000.) as i64
@@ -52,19 +51,19 @@ pub async fn sleep(ms: u32) {
     dioxus::document::eval(&js).await.unwrap();
 }
 
-pub fn auto_error(err: ServerError) {
-    tracing::error!("{err:#?}");
-    match err {
-        ServerError::LoginOutDated => {
-            login_outdated::login_outdated();
-        }
-        ServerError::NotFound => {
-            let url = web_sys::window().unwrap().location().as_string().unwrap();
-            notfound::notfound(url);
-        }
-        _ => {}
-    }
-}
+// pub fn auto_error(err: ServerError) {
+//     tracing::error!("{err:#?}");
+//     match err {
+//         ServerError::LoginOutDated => {
+//             login_outdated::login_outdated();
+//         }
+//         ServerError::NotFound => {
+//             let url = web_sys::window().unwrap().location().as_string().unwrap();
+//             notfound::notfound(url);
+//         }
+//         _ => {}
+//     }
+// }
 
 pub async fn send_message<T>(msg: FrontMessage) -> eyre::Result<T>
 where
