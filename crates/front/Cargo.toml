@@ -16,6 +16,7 @@ getrandom = { workspace = true, features = ["wasm_js"] }
 gloo = "0.11.0"
 human_bytes = { version = "0.4.3", features = ["si-units"] }
 itertools.workspace = true
+katex-rs = "0.2.3"
 markdown = "1.0.0"
 pharos = "0.5.3"
 pulldown-cmark = "0.13.0"
