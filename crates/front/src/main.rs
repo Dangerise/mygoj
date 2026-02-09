@@ -23,6 +23,7 @@ mod notfound;
 mod problem;
 mod problem_edit;
 mod problem_file_download;
+mod problem_file_list;
 mod problem_file_view;
 mod record;
 mod register;
@@ -75,6 +76,8 @@ enum Route {
     ProblemFileDownload { pid: Pid, path: String },
     #[route("/problem/:pid/file_view/:path")]
     ProblemFileView { pid: Pid, path: String },
+    #[route("/problem/:pid/files")]
+    ProblemFileList { pid: Pid },
 }
 
 use file_view::FileView;
@@ -88,6 +91,7 @@ use notfound::NotFound;
 use problem::Problem;
 use problem_edit::ProblemEdit;
 use problem_file_download::ProblemFileDownload;
+use problem_file_list::ProblemFileList;
 use problem_file_view::ProblemFileView;
 use record::Record;
 use register::UserRegister;

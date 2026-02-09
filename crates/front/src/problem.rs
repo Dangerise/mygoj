@@ -34,6 +34,13 @@ fn render_problem(front: ProblemFront) -> Element {
         ..
     } = front;
     rsx! {
+        Link {
+            to: Route::ProblemFileList {
+                pid: pid.clone(),
+            },
+            "files"
+        }
+        {"   "}
         if edit {
             Link {
                 to: Route::ProblemEdit {

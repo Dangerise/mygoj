@@ -140,9 +140,19 @@ pub async fn receive_front_message(
 
     match message {
         FrontMessage::GetProblemFiles(pid) => {
-            can_edit_problem(&pid).await?;
-            let files = get_problem(&pid).await.map(|x| x.files.clone())?;
-            to_json(&files)
+            let p = get_problem(&pid).await?;
+            let private = if let Some(user) = logined_user {
+                can_manage_problem(&user, &pid).await?
+            } else {
+                false
+            };
+            if private {
+                to_json(&p.files)
+            } else {
+                let iter = p.files.iter().filter(|d| d.is_public);
+                let v: Vec<_> = iter.collect();
+                to_json(&v)
+            }
         }
         FrontMessage::GetProblemEditable(pid) => {
             can_edit_problem(&pid).await?;
