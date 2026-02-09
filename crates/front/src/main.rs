@@ -11,6 +11,7 @@ use std::sync::LazyLock;
 
 mod components;
 mod error;
+mod file_view;
 mod home;
 mod judge_status;
 mod login;
@@ -22,6 +23,7 @@ mod notfound;
 mod problem;
 mod problem_edit;
 mod problem_file_download;
+mod problem_file_view;
 mod record;
 mod register;
 mod submit;
@@ -71,8 +73,11 @@ enum Route {
     ProblemEdit { pid: Pid },
     #[route("/problem/:pid/file_download/:path")]
     ProblemFileDownload { pid: Pid, path: String },
+    #[route("/problem/:pid/file_view/:path")]
+    ProblemFileView { pid: Pid, path: String },
 }
 
+use file_view::FileView;
 use home::Home;
 use judge_status::JudgeStatus;
 use login::Login;
@@ -83,6 +88,7 @@ use notfound::NotFound;
 use problem::Problem;
 use problem_edit::ProblemEdit;
 use problem_file_download::ProblemFileDownload;
+use problem_file_view::ProblemFileView;
 use record::Record;
 use register::UserRegister;
 use submit::Submit;

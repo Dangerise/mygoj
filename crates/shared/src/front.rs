@@ -6,6 +6,7 @@ pub enum FrontMessage {
     GetProblemEditable(Pid),
     GetProblemFront(Pid),
     GetProblemFiles(Pid),
+    GetProblemFileMeta(Pid, CompactString),
     RequireProblemFileDownloadToken(Pid, CompactString),
     GetRecord(Rid),
     Submit(Submission),

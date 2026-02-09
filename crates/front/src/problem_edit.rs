@@ -356,8 +356,6 @@ fn render_files_view(
                             {"    "}
                             render_file_state { state: file.state }
                             {"    "}
-
-
                             button {
                                 onclick: {
                                     let pid = pid.clone();
@@ -370,6 +368,19 @@ fn render_files_view(
                                     }
                                 },
                                 "download"
+                            }
+                            button {
+                                onclick: {
+                                    let pid = pid.clone();
+                                    let path = file.path.clone();
+                                    move |_| {
+                                        web_sys::window()
+                                            .unwrap()
+                                            .open_with_url(&format!("/problem/{}/file_view/{}", pid, path))
+                                            .unwrap();
+                                    }
+                                },
+                                "view"
                             }
                         }
                     }

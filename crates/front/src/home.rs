@@ -15,7 +15,7 @@ pub fn Home() -> Element {
 
     rsx! {
         div { class: "home",
-            Markdown { md: "# It's Mygoj !!!" }
+            Markdown { content: "# It's Mygoj !!!" }
         }
         {welcome()}
     }

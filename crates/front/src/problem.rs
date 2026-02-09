@@ -29,7 +29,7 @@ fn render_problem(front: ProblemFront) -> Element {
     rsx! {
         h1 { "{pid} {title}" }
         p { "time {time_limit} ms memory {memory_limit} mb" }
-        Markdown { md: statement }
+        Markdown { content: statement }
         Link { to: Route::Submit { pid }, "To submit" }
     }
 }

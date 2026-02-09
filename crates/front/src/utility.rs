@@ -40,7 +40,7 @@ pub fn ws_origin() -> String {
 pub fn Common(content: String) -> Element {
     rsx! {
         div { class: "common",
-            Markdown { md: content }
+            Markdown { content }
         }
     }
 }
@@ -82,6 +82,18 @@ where
     }
     let res = resp.json().await?;
     Ok(res)
+}
+
+pub async fn download_problem_file(pid: &Pid, path: &str) -> eyre::Result<bytes::Bytes> {
+    let mut req = reqwest::Client::new().get(format!(
+        "{}/api/front/problem_file_download/{}/{}",
+        *SERVER_URL, pid, path
+    ));
+    if let Some(token) = login_token() {
+        req = req.bearer_auth(token);
+    }
+    let bytes = req.send().await?.bytes().await?;
+    Ok(bytes)
 }
 
 pub async fn init_login_state() {

@@ -1,7 +1,8 @@
 use super::judge::judge_machines;
 use super::problem::{
-    can_manage_problem, files::require_problem_file_download_token, get_problem,
-    get_problem_editable, get_problem_front,
+    can_manage_problem,
+    files::{get_problem_file_meta, require_problem_file_download_token},
+    get_problem, get_problem_editable, get_problem_front,
 };
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
@@ -121,6 +122,8 @@ pub async fn receive_front_message(
     Extension(logined_user): Extension<Option<LoginedUser>>,
     Json(message): Json<FrontMessage>,
 ) -> Result<Response, ServerError> {
+    tracing::trace!("front message {:#?}", message);
+
     fn to_json<T: serde::Serialize>(val: T) -> Result<Response, ServerError> {
         Ok(Response::new(Body::new(
             serde_json::to_string_pretty(&val).map_err(ServerError::into_internal)?,
@@ -128,9 +131,10 @@ pub async fn receive_front_message(
     }
     let can_edit_problem = async |pid: &Pid| {
         if let Some(user) = &logined_user
-            && can_manage_problem(user, pid).await? {
-                return Ok(());
-            }
+            && can_manage_problem(user, pid).await?
+        {
+            return Ok(());
+        }
         Err(ServerError::Fuck)
     };
 
@@ -168,10 +172,16 @@ pub async fn receive_front_message(
         }
         FrontMessage::GetLoginedUser => to_json(&logined_user),
         FrontMessage::RequireProblemFileDownloadToken(pid, path) => {
-            let token = tokio::spawn(require_problem_file_download_token(logined_user, pid, path))
-                .await
-                .unwrap()?;
+            let token = tokio::spawn(async move {
+                require_problem_file_download_token(logined_user.as_ref(), pid, path).await
+            })
+            .await
+            .unwrap()?;
             to_json(token)
+        }
+        FrontMessage::GetProblemFileMeta(pid, path) => {
+            let meta = get_problem_file_meta(logined_user.as_ref(), &pid, &path).await?;
+            to_json(&meta)
         }
     }
 }

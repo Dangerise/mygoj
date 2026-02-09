@@ -1,7 +1,7 @@
 use super::*;
 
 pub async fn can_access_problem_file(
-    user: &Option<LoginedUser>,
+    user: Option<&LoginedUser>,
     pid: &Pid,
     path: &str,
 ) -> Result<bool, ServerError> {
@@ -12,7 +12,7 @@ pub async fn can_access_problem_file(
         .find(|d| d.path == path)
         .ok_or(ServerError::NotFound)?;
     let mut ret = file.is_public;
-    if let Some(user) = user.as_ref() {
+    if let Some(user) = user {
         ret |= user.privilege.edit_problems;
         ret |= Some(user.uid) == problem.owner;
     }
@@ -186,10 +186,9 @@ pub async fn commit_problem_files(
         }
         .await;
         let count = clean_unused_problem_files(&pid).await?;
-        if ret.is_ok()
-            && count != to_remove {
-                return Err(ServerError::Internal("clean files wrong".into()));
-            }
+        if ret.is_ok() && count != to_remove {
+            return Err(ServerError::Internal("clean files wrong".into()));
+        }
         Ok(())
     })
     .await
@@ -215,11 +214,11 @@ use axum_extra::response::FileStream;
 use tokio_util::io::ReaderStream;
 
 pub async fn require_problem_file_download_token(
-    login: Option<LoginedUser>,
+    login: Option<&LoginedUser>,
     pid: Pid,
     path: CompactString,
 ) -> Result<DownloadToken, ServerError> {
-    if can_access_problem_file(&login, &pid, &path).await? {
+    if can_access_problem_file(login, &pid, &path).await? {
         let token = DownloadToken::new();
         let info = DownloadTokenInfo { pid, path };
         DOWNLOAD_TOKENS.insert(token, info);
@@ -235,7 +234,7 @@ pub async fn require_problem_file_download_token(
 
 #[derive(Serialize, Deserialize)]
 pub struct DownloadQuery {
-    token: DownloadToken,
+    token: Option<DownloadToken>,
 }
 
 pub async fn file_download(
@@ -243,11 +242,13 @@ pub async fn file_download(
     Path((pid, path)): Path<(Pid, CompactString)>,
     Query(DownloadQuery { token }): Query<DownloadQuery>,
 ) -> Result<impl IntoResponse, ServerError> {
-    if let Some((_, info)) = DOWNLOAD_TOKENS.remove(&token) {
+    if let Some(token) = token
+        && let Some((_, info)) = DOWNLOAD_TOKENS.remove(&token)
+    {
         if info.path != path || info.pid != pid {
             return Err(ServerError::Fuck);
         }
-    } else if !can_access_problem_file(&login, &pid, &path).await? {
+    } else if !can_access_problem_file(login.as_ref(), &pid, &path).await? {
         return Err(ServerError::NoPrivilege);
     };
     let file = get_problem_file(&pid, &path).await?;
@@ -257,4 +258,21 @@ pub async fn file_download(
     let stream = ReaderStream::new(file);
     let stream = FileStream::new(stream).file_name(path);
     Ok(stream)
+}
+
+pub async fn get_problem_file_meta(
+    user: Option<&LoginedUser>,
+    pid: &Pid,
+    path: &str,
+) -> Result<ProblemFile, ServerError> {
+    let problem = get_problem(&pid).await?;
+    let mat = problem
+        .files
+        .iter()
+        .find(|d| d.path == path)
+        .ok_or(ServerError::Fuck)?;
+    if !can_access_problem_file(user, pid, path).await? {
+        return Err(ServerError::NoPrivilege);
+    }
+    Ok(mat.clone())
 }
