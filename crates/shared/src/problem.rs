@@ -16,6 +16,12 @@ pub struct ProblemFront {
     pub public_files: Vec<CompactString>,
 }
 
+impl ProblemFront {
+    pub fn can_be_edited_by(&self, user: &LoginedUser) -> bool {
+        self.owner == Some(user.uid) || user.privilege.edit_problems
+    }
+}
+
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct Testcase {
     pub input_file: CompactString,

@@ -18,6 +18,13 @@ fn wrong_page() -> Element {
 #[component]
 fn render_problem(front: ProblemFront) -> Element {
     tracing::info!("render problem {:?}", &front);
+    let login = LOGIN_STATE.read();
+    let login = &*login;
+    let edit = if let Some(login) = login {
+        front.can_be_edited_by(login)
+    } else {
+        false
+    };
     let ProblemFront {
         pid,
         title,
@@ -27,6 +34,14 @@ fn render_problem(front: ProblemFront) -> Element {
         ..
     } = front;
     rsx! {
+        if edit {
+            Link {
+                to: Route::ProblemEdit {
+                    pid: pid.clone(),
+                },
+                "edit"
+            }
+        }
         h1 { "{pid} {title}" }
         p { "time {time_limit} ms memory {memory_limit} mb" }
         Markdown { content: statement }
