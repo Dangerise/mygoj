@@ -40,7 +40,7 @@ pub async fn clean_unused_problem_files(pid: &Pid) -> Result<u64, ServerError> {
             let Ok(uuid) = filename.parse::<Uuid>() else {
                 break 'tag true;
             };
-            files.iter().find(|d| d.uuid == uuid).is_none()
+            !files.iter().any(|d| d.uuid == uuid)
         };
         if should_clean {
             tracing::debug!("clean {}", filename.display());
@@ -186,11 +186,10 @@ pub async fn commit_problem_files(
         }
         .await;
         let count = clean_unused_problem_files(&pid).await?;
-        if ret.is_ok() {
-            if count != to_remove {
+        if ret.is_ok()
+            && count != to_remove {
                 return Err(ServerError::Internal("clean files wrong".into()));
             }
-        }
         Ok(())
     })
     .await
@@ -248,10 +247,8 @@ pub async fn file_download(
         if info.path != path || info.pid != pid {
             return Err(ServerError::Fuck);
         }
-    } else {
-        if !can_access_problem_file(&login, &pid, &path).await? {
-            return Err(ServerError::NoPrivilege);
-        }
+    } else if !can_access_problem_file(&login, &pid, &path).await? {
+        return Err(ServerError::NoPrivilege);
     };
     let file = get_problem_file(&pid, &path).await?;
     let file = fs::File::open(file)

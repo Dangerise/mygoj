@@ -257,7 +257,7 @@ fn render_files_view(
             let size = new_file.content.len() as u64;
             let path = new_file.path.clone();
             let time = new_file.time;
-            let Some(old) = files.iter_mut().filter(|d| d.path == path).next() else {
+            let Some(old) = files.iter_mut().find(|d| d.path == path) else {
                 files.push(EditingProblemFile {
                     is_public: false,
                     size,

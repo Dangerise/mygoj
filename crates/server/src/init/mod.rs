@@ -58,6 +58,6 @@ pub async fn init_db(path: impl AsRef<Path>) -> eyre::Result<()> {
 
 pub async fn init_problems(path: impl AsRef<Path>) -> eyre::Result<()> {
     let path = path.as_ref();
-    embed::problems(&*path).await?;
+    embed::problems(path).await?;
     Ok(())
 }

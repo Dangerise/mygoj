@@ -161,5 +161,5 @@ pub async fn can_manage_problem(user: &LoginedUser, pid: &Pid) -> Result<bool, S
     if p.owner == Some(user.uid) {
         return Ok(true);
     }
-    return Ok(false);
+    Ok(false)
 }

@@ -31,8 +31,8 @@ async fn login(email: String, password: String) -> eyre::Result<()> {
 
 #[component]
 pub fn Login() -> Element {
-    let mut email = use_signal(|| String::new());
-    let mut password = use_signal(|| String::new());
+    let mut email = use_signal(String::new);
+    let mut password = use_signal(String::new);
 
     let mut error_msg = use_signal(|| None);
     let login = move |_| {

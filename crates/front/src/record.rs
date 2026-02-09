@@ -47,7 +47,7 @@ mod inner {
                     sum_time,
                 } = status;
                 let verdict = format!("{}", verdict);
-                let status = cases.into_iter().map(|x| Some(x)).collect();
+                let status = cases.into_iter().map(Some).collect();
                 rsx! {
                     p { "max time {max_time} sum time {sum_time} memory used {memory_used} " }
                     p { "{verdict}" }
@@ -145,11 +145,11 @@ mod inner {
             record.set(Some(t));
             if !done {
                 #[cfg(feature = "ws")]
-                ws(rid, record.clone()).await;
+                ws(rid, record).await;
                 #[cfg(not(feature = "ws"))]
                 manual_refresh(rid, record).await;
             }
-            ()
+            
         });
         if let Some(record) = &*record.read() {
             let Record {

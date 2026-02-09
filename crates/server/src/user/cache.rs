@@ -44,5 +44,5 @@ pub async fn find_by_username(username: &CompactString) -> Option<Uid> {
 }
 
 pub async fn find_by_token(token: Token) -> Option<Uid> {
-    TOKENS.pin().get(&token).map(|x| *x).flatten()
+    TOKENS.pin().get(&token).copied().flatten()
 }

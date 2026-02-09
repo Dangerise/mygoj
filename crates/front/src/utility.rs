@@ -92,7 +92,7 @@ pub async fn init_login_state() {
                 tracing::info!("login outdated");
                 logout::clear_cache();
             } else {
-                Err::<(), _>(err).unwrap();
+                panic!("{:?}", err);
             }
             None
         }
@@ -123,7 +123,7 @@ pub fn time_diff(diff: u64) -> String {
     } else if diff > MIN {
         format!("{} minute ago", diff / MIN)
     } else {
-        format!("just now")
+        "just now".to_string()
     }
 }
 

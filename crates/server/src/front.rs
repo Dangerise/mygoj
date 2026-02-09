@@ -127,11 +127,10 @@ pub async fn receive_front_message(
         )))
     }
     let can_edit_problem = async |pid: &Pid| {
-        if let Some(user) = &logined_user {
-            if can_manage_problem(user, pid).await? {
+        if let Some(user) = &logined_user
+            && can_manage_problem(user, pid).await? {
                 return Ok(());
             }
-        }
         Err(ServerError::Fuck)
     };
 

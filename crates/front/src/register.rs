@@ -3,11 +3,11 @@ use shared::user::*;
 
 #[component]
 pub fn UserRegister() -> Element {
-    let mut email = use_signal(|| String::new());
-    let mut password = use_signal(|| String::new());
-    let mut confirm = use_signal(|| String::new());
-    let mut nickname = use_signal(|| String::new());
-    let mut username = use_signal(|| String::new());
+    let mut email = use_signal(String::new);
+    let mut password = use_signal(String::new);
+    let mut confirm = use_signal(String::new);
+    let mut nickname = use_signal(String::new);
+    let mut username = use_signal(String::new);
 
     let mut pwd_ne = use_signal(|| false);
     let mut completed = use_signal(|| false);
