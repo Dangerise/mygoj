@@ -26,10 +26,10 @@ pub fn ws_origin() -> String {
     assert!(origin.starts_with("http") || origin.starts_with("https"));
     format!(
         "ws{}",
-        if origin.starts_with("http") {
-            &origin["http".len()..]
-        } else if origin.starts_with("https") {
-            &origin["https".len()..]
+        if let Some(s) = origin.strip_prefix("http") {
+            s
+        } else if let Some(s) = origin.strip_prefix("https") {
+            s
         } else {
             unreachable!()
         }
@@ -92,7 +92,7 @@ pub async fn init_login_state() {
                 tracing::info!("login outdated");
                 logout::clear_cache();
             } else {
-                panic!("{:?}", err);
+                Err::<(), _>(err).unwrap();
             }
             None
         }
@@ -123,7 +123,7 @@ pub fn time_diff(diff: u64) -> String {
     } else if diff > MIN {
         format!("{} minute ago", diff / MIN)
     } else {
-        "just now".to_string()
+        format!("just now")
     }
 }
 

@@ -4,6 +4,13 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct Token(Uuid);
 
+impl Default for Token {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Token {
     #[inline]
     pub fn new() -> Self {

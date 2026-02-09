@@ -4,6 +4,13 @@ use uuid::Uuid;
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash, Serialize, Deserialize)]
 pub struct DownloadToken(Uuid);
 
+impl Default for DownloadToken {
+    #[inline]
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl DownloadToken {
     #[inline]
     pub fn new() -> Self {
