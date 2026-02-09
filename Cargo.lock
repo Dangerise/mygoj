@@ -411,6 +411,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "613afe47fcd5fac7ccf1db93babcb082c5994d996f20b8b159f2ad1658eb5724"
 
 [[package]]
+name = "char_index"
+version = "0.1.4"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "10ef8669476802b7127a0a97612a0c34113e949ee65c695e4ac259f1f49aaa25"
+
+[[package]]
 name = "charset"
 version = "0.1.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1558,6 +1564,7 @@ dependencies = [
  "serde",
  "serde_json",
  "shared",
+ "synoptic",
  "uuid",
  "wasm-bindgen-futures",
  "web-sys",
@@ -2326,6 +2333,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "if_chain"
+version = "1.0.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "cd62e6b5e86ea8eeeb8db1de02880a6abc01a397b2ebb64b5d74ac255318f5cb"
+
+[[package]]
 name = "indenter"
 version = "0.3.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2794,6 +2807,12 @@ dependencies = [
  "cfg_aliases 0.2.1",
  "libc",
 ]
+
+[[package]]
+name = "nohash-hasher"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "2bf50223579dc7cdcfb3bfcacf7069ff68243f8c363f62ffa99cf000a6b9c451"
 
 [[package]]
 name = "ntapi"
@@ -3435,6 +3454,18 @@ dependencies = [
  "getrandom 0.2.16",
  "libredox",
  "thiserror 2.0.17",
+]
+
+[[package]]
+name = "regex"
+version = "1.12.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "e10754a14b9137dd7b1e3e5b0493cc9171fdd105e0ab477f51b72e7f3ac0e276"
+dependencies = [
+ "aho-corasick",
+ "memchr",
+ "regex-automata",
+ "regex-syntax",
 ]
 
 [[package]]
@@ -4354,6 +4385,19 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0bf256ce5efdfa370213c1dabab5935a12e49f2c58d15e9eac2870d3b4f27263"
 dependencies = [
  "futures-core",
+]
+
+[[package]]
+name = "synoptic"
+version = "2.2.9"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "3961017ab3836f3d19579098fae565969c5e7c32c66d746bc706cfbbb047e080"
+dependencies = [
+ "char_index",
+ "if_chain",
+ "nohash-hasher",
+ "regex",
+ "unicode-width",
 ]
 
 [[package]]
