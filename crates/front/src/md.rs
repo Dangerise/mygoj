@@ -18,6 +18,7 @@ pub fn render_katex() {
         let elm: web_sys::Element = node.dyn_into().unwrap();
         let inner = elm.inner_html();
         tracing::info!("render katex {}", inner);
+        let inner = inner.replace("&amp;", "&");
         let ret = match katex::render_to_string(&ctx, &inner, &settings) {
             Ok(ret) => ret,
             Err(err) => {
@@ -50,13 +51,15 @@ pub fn render_code_block() {
         });
         listeners.push(listener);
         elm.insert_adjacent_element("beforebegin", &button).unwrap();
+        elm.insert_adjacent_element("beforebegin", &document.create_element("p").unwrap())
+            .unwrap();
     }
 }
 
 #[component]
 pub fn Markdown(content: String) -> Element {
     use pulldown_cmark::Options;
-    let options = Options::ENABLE_MATH;
+    let options = Options::ENABLE_MATH | Options::ENABLE_TASKLISTS | Options::ENABLE_TABLES;
     let parser = pulldown_cmark::Parser::new_ext(&content, options);
     let mut html = String::new();
     pulldown_cmark::html::push_html(&mut html, parser);
