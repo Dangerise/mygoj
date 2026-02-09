@@ -85,7 +85,7 @@ pub async fn user_register(reg: UserRegistration) -> Result<Uid, ServerError> {
     Ok(uid)
 }
 
-async fn find_by_email(email: &CompactString) -> Result<Option<Uid>, ServerError> {
+async fn find_by_email(email: &str) -> Result<Option<Uid>, ServerError> {
     if let Some(uid) = cache::find_by_email(email).await {
         return Ok(Some(uid));
     }
@@ -94,7 +94,7 @@ async fn find_by_email(email: &CompactString) -> Result<Option<Uid>, ServerError
         .map_err(ServerError::into_internal)
 }
 
-async fn find_by_username(email: &CompactString) -> Result<Option<Uid>, ServerError> {
+async fn find_by_username(email: &str) -> Result<Option<Uid>, ServerError> {
     if let Some(uid) = cache::find_by_username(email).await {
         return Ok(Some(uid));
     }

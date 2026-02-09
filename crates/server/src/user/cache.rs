@@ -35,11 +35,11 @@ pub async fn get_user(uid: Uid) -> Option<User> {
     USERS.pin().get(&uid).cloned()
 }
 
-pub async fn find_by_email(email: &CompactString) -> Option<Uid> {
+pub async fn find_by_email(email: &str) -> Option<Uid> {
     EMAILS.pin().get(email).cloned()
 }
 
-pub async fn find_by_username(username: &CompactString) -> Option<Uid> {
+pub async fn find_by_username(username: &str) -> Option<Uid> {
     USERNAMES.pin().get(username).cloned()
 }
 
