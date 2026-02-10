@@ -16,7 +16,9 @@ pub fn transaction<'a, F, R>(
     callback: F,
 ) -> BoxFuture<'a, Result<R, Either<sqlx::Error, ServerError>>>
 where
-    for<'c> F: FnOnce(&'c mut Transaction<'_, Sqlite>) -> BoxFuture<'c, Result<R, Either<sqlx::Error, ServerError>>>
+    for<'c> F: FnOnce(
+            &'c mut Transaction<'_, Sqlite>,
+        ) -> BoxFuture<'c, Result<R, Either<sqlx::Error, ServerError>>>
         + 'a
         + Send
         + Sync,

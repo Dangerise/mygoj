@@ -46,8 +46,8 @@ pub fn FileView(name: String, bytes: bytes::Bytes) -> Element {
                 }
             }
         }
-        "txt"=>{
-            rsx!{
+        "txt" => {
+            rsx! {
                 if let Ok(s) = as_string() {
                     Text { content: s }
                 } else {
@@ -55,7 +55,7 @@ pub fn FileView(name: String, bytes: bytes::Bytes) -> Element {
                 }
             }
         }
-        _ => rsx!{
+        _ => rsx! {
             if let Ok(s) = as_string() {
                 Text { content: s }
             } else {

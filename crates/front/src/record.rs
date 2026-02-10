@@ -149,7 +149,6 @@ mod inner {
                 #[cfg(not(feature = "ws"))]
                 manual_refresh(rid, record).await;
             }
-            
         });
         if let Some(record) = &*record.read() {
             let Record {

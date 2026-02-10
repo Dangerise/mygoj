@@ -1,6 +1,7 @@
 use serde::{Deserialize, Serialize};
 
 pub mod constant;
+pub mod download;
 pub mod error;
 pub mod front;
 pub mod judge;
@@ -9,7 +10,6 @@ pub mod record;
 pub mod submission;
 pub mod token;
 pub mod user;
-pub mod download;
 
 // use token::*;
 use judge::*;

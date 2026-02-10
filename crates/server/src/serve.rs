@@ -51,7 +51,10 @@ pub fn router() -> Router {
     let front_api = Router::new()
         .route("/", any(front::receive_front_message))
         .route("/record_ws", any(record::ws))
-        .route("/problem_file_download/{pid}/{*path}", any(problem::files::file_download))
+        .route(
+            "/problem_file_download/{pid}/{*path}",
+            any(problem::files::file_download),
+        )
         .route(
             "/commit_problem_files/{pid}",
             any(problem::files::commit_problem_files),

@@ -1,17 +1,17 @@
 mod db;
+mod error;
 mod front;
 mod judge;
 mod problem;
 mod record;
 mod user;
-mod error;
 
 pub mod init;
 pub mod serve;
 
+use error::Fuck;
 use shared::error::ServerError;
 use std::path::PathBuf;
-use error::Fuck;
 
 #[track_caller]
 pub fn storage_dir() -> PathBuf {

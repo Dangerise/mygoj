@@ -10,7 +10,7 @@ static RESOURCE: Mutex<String> = Mutex::new(String::new());
 
 #[component]
 pub fn NotFound() -> Element {
-    let resource=RESOURCE.lock().unwrap().clone();
+    let resource = RESOURCE.lock().unwrap().clone();
     rsx! {
         Common { content: "404 not found\nresource {resource}" }
     }
