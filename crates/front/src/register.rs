@@ -12,11 +12,9 @@ pub fn UserRegister() -> Element {
     let mut pwd_ne = use_signal(|| false);
     let mut completed = use_signal(|| false);
 
+    let mut error_msg = use_signal(String::new);
+
     let register = move |_| {
-        // let email = email.clone();
-        // let password = password.clone();
-        // let confirm = confirm.clone();
-        // let nickname = nickname.clone();
         if password.cloned() != confirm.cloned() {
             pwd_ne.set(true);
             return;
@@ -51,6 +49,12 @@ pub fn UserRegister() -> Element {
         };
     }
 
+    use_effect(move || {
+        if !shared::is_lowercase(&username()) {
+            error_msg.set("username should be lowercase".into());
+        }
+    });
+
     rsx! {
         p { "nickname" }
         input {
@@ -84,6 +88,15 @@ pub fn UserRegister() -> Element {
             onchange: move |evt| {
                 nickname.set(evt.value());
             },
+        }
+        {
+            let err = error_msg.read();
+            (!err.is_empty()).then(|| rsx! {
+                div {
+                    label { "error    " }
+                    label { "{err}" }
+                }
+            })
         }
         button { onclick: register, "register" }
     }

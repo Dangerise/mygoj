@@ -18,6 +18,8 @@ pub enum ServerError {
     EmailExist,
     #[error("username exist")]
     UsernameExist,
+    #[error("username invalid")]
+    InvalidUsername,
     #[error("no privilege")]
     NoPrivilege,
     #[error("network error")]
@@ -52,9 +54,8 @@ mod on_server {
             use ServerError::*;
             match self {
                 Network => StatusCode::BAD_REQUEST,
-                UserNotFound | PasswordWrong | Fuck | EmailExist | UsernameExist => {
-                    StatusCode::BAD_REQUEST
-                }
+                UserNotFound | PasswordWrong | Fuck | EmailExist | UsernameExist
+                | InvalidUsername => StatusCode::BAD_REQUEST,
                 NoPrivilege => StatusCode::FORBIDDEN,
                 LoginOutDated => StatusCode::UNAUTHORIZED,
                 Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,

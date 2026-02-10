@@ -26,3 +26,8 @@ pub fn from_json_in_row<T: serde::de::DeserializeOwned>(
     let s = row.get("json");
     serde_json::from_str(s).map_err(|err| sqlx::Error::Decode(Box::new(err)))
 }
+
+#[inline]
+pub fn is_lowercase(s: &str) -> bool {
+    s.chars().all(|c| c.is_lowercase())
+}

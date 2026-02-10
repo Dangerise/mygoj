@@ -76,6 +76,9 @@ pub async fn user_register(reg: UserRegistration) -> Result<Uid, ServerError> {
         username,
         ..
     } = &reg;
+    if !shared::is_lowercase(username) {
+        return Err(ServerError::InvalidUsername);
+    }
     if email.len() > 50 || password.len() > 50 || username.contains("@") {
         return Err(ServerError::Fuck);
     }
@@ -100,11 +103,12 @@ async fn find_by_email(email: &str) -> Result<Option<Uid>, ServerError> {
         .map_err(ServerError::into_internal)
 }
 
-async fn find_by_username(email: &str) -> Result<Option<Uid>, ServerError> {
-    if let Some(uid) = cache::find_by_username(email).await {
+async fn find_by_username(username: &str) -> Result<Option<Uid>, ServerError> {
+    assert!(shared::is_lowercase(username));
+    if let Some(uid) = cache::find_by_username(username).await {
         return Ok(Some(uid));
     }
-    db::find_by_username(None, email)
+    db::find_by_username(None, username)
         .await
         .map_err(ServerError::into_internal)
 }

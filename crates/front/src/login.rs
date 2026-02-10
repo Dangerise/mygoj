@@ -31,13 +31,13 @@ async fn login(email: String, password: String) -> eyre::Result<()> {
 
 #[component]
 pub fn Login() -> Element {
-    let mut email = use_signal(String::new);
+    let mut ident = use_signal(String::new);
     let mut password = use_signal(String::new);
 
     let mut error_msg = use_signal(|| None);
     let login = move |_| {
         spawn(async move {
-            match login(email.cloned(), password.cloned()).await {
+            match login(ident.cloned(), password.cloned()).await {
                 Ok(_) => {}
                 Err(err) => {
                     let err = err.split();
@@ -107,10 +107,10 @@ pub fn Login() -> Element {
                 rsx! {}
             }
         }
-        p { "email" }
+        p { "ident" }
         input {
             onchange: move |evt| {
-                email.set(evt.value());
+                ident.set(evt.value());
             },
         }
         p { "password" }
