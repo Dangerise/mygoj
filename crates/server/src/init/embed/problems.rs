@@ -1,4 +1,5 @@
 use super::*;
+use shared::user::Uid;
 
 #[derive(RustEmbed)]
 #[folder = "src/init/embed/simple_fs"]
@@ -8,7 +9,7 @@ impl EmbedProblem for SimpleFs {
     fn base() -> Problem {
         Problem {
             pid: Pid::new("3"),
-            owner: None,
+            owner: Some(Uid(1)),
             title: "simple_fs".into(),
             statement: "the statement of simplefs".to_string().into(),
             memory_limit: 0,
@@ -46,7 +47,7 @@ impl EmbedProblem for ApB {
     fn base() -> Problem {
         Problem {
             pid: Pid::new("1"),
-            owner: None,
+            owner: Some(Uid(1)),
             title: "A+B".into(),
             statement: include_str!("a+b/statement.md").to_string().into(),
             memory_limit: 512,

@@ -30,9 +30,15 @@ impl User {
             privilege: self.privilege,
         }
     }
+    pub fn display(&self) -> UserDisplay {
+        UserDisplay {
+            nickname: self.nickname.clone(),
+            uid: self.uid,
+        }
+    }
 }
 
-async fn get_user(uid: Uid) -> Result<Option<User>, ServerError> {
+pub async fn get_user(uid: Uid) -> Result<Option<User>, ServerError> {
     if let Some(user) = cache::get_user(uid).await {
         return Ok(Some(user));
     }

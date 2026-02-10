@@ -2,6 +2,7 @@ mod cache;
 mod db;
 pub mod files;
 
+use super::user::get_user;
 use super::{Fuck, ServerError};
 use compact_str::CompactString;
 use dashmap::DashMap;
@@ -68,7 +69,18 @@ pub async fn get_problem_editable(pid: &Pid) -> Result<ProblemEditable, ServerEr
 pub async fn get_problem_front(pid: &Pid) -> Result<ProblemFront, ServerError> {
     let problem = get_problem(pid).await?;
 
+    let owner_display = if let Some(owner) = problem.owner {
+        let display = get_user(owner)
+            .await?
+            .map(|d| d.display())
+            .ok_or(ServerError::BadData)?;
+        Some(display)
+    } else {
+        None
+    };
+
     let front = ProblemFront {
+        owner_display,
         title: problem.title.clone(),
         statement: (*problem.statement).clone(),
         time_limit: problem.time_limit,

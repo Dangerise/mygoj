@@ -9,6 +9,7 @@ pub struct Pid(pub CompactString);
 pub struct ProblemFront {
     pub pid: Pid,
     pub owner: Option<Uid>,
+    pub owner_display: Option<UserDisplay>,
     pub title: CompactString,
     pub statement: String,
     pub time_limit: u32,

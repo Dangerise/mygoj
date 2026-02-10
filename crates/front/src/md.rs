@@ -156,6 +156,6 @@ pub fn Markdown(content: String) -> Element {
     });
 
     rsx! {
-        div {class:"markdown", dangerous_inner_html: html }
+        div { class: "markdown", dangerous_inner_html: html }
     }
 }

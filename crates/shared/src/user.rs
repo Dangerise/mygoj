@@ -12,6 +12,12 @@ pub struct UserRegistration {
     pub username: CompactString,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Hash)]
+pub struct UserDisplay {
+    pub nickname: CompactString,
+    pub uid: Uid,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Hash, Eq)]
 pub struct LoginedUser {
     pub uid: Uid,

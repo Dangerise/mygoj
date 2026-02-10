@@ -31,9 +31,19 @@ fn render_problem(front: ProblemFront) -> Element {
         statement,
         time_limit,
         memory_limit,
+        owner_display,
         ..
     } = front;
     rsx! {
+        if let Some(display) = owner_display {
+            {
+                let name = display.nickname;
+                rsx! {
+                    label { "owner {name}" }
+                }
+            }
+        }
+
         Link {
             to: Route::ProblemFileList {
                 pid: pid.clone(),

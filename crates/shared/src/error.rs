@@ -22,6 +22,8 @@ pub enum ServerError {
     NoPrivilege,
     #[error("network error")]
     Network,
+    #[error("bad data")]
+    BadData,
 }
 
 #[cfg(feature = "server")]
@@ -56,6 +58,7 @@ mod on_server {
                 LoginOutDated => StatusCode::UNAUTHORIZED,
                 Internal(_) => StatusCode::INTERNAL_SERVER_ERROR,
                 NotFound => StatusCode::NOT_FOUND,
+                BadData => StatusCode::INTERNAL_SERVER_ERROR,
             }
         }
     }
