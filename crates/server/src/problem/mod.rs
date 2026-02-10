@@ -1,6 +1,7 @@
 mod cache;
 mod db;
 pub mod files;
+pub mod pages;
 
 use super::user::get_user;
 use super::{Fuck, ServerError};
@@ -26,6 +27,7 @@ static PROBLEM_LOCKS: DashMap<Pid, Arc<RwLock<()>>> = DashMap::new();
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Problem {
     pub pid: Pid,
+    pub created_time: i64,
     pub owner: Option<Uid>,
     pub title: CompactString,
     pub statement: Arc<String>,
@@ -33,6 +35,15 @@ pub struct Problem {
     pub time_limit: u32,
     pub testcases: Arc<Vec<Testcase>>,
     pub files: Arc<Vec<ProblemFile>>,
+}
+
+impl Problem {
+    pub fn profile(&self) -> ProblemProfile {
+        ProblemProfile {
+            pid: self.pid.clone(),
+            title: self.title.clone(),
+        }
+    }
 }
 
 pub async fn get_problem(pid: &Pid) -> Result<Arc<Problem>, ServerError> {

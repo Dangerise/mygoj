@@ -7,6 +7,8 @@ pub enum FrontMessage {
     GetProblemFront(Pid),
     GetProblemFiles(Pid),
     GetProblemFileMeta(Pid, CompactString),
+    GetProblemsPageCount,
+    GetProblemsPage(u64),
     RequireProblemFileDownloadToken(Pid, CompactString),
     GetRecord(Rid),
     Submit(Submission),

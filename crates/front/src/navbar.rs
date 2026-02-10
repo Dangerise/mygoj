@@ -5,6 +5,7 @@ pub fn Navbar() -> Element {
     rsx! {
         h1 { "MyGoJ" }
         Link { to: Route::Home {}, "Home " }
+        Link { to: Route::ProblemPage { index: 0 }, "Problems " }
         {
             if let Some(login_state) = &*LOGIN_STATE.read() {
                 let nickname = &login_state.nickname;

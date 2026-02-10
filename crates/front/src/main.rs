@@ -25,6 +25,7 @@ mod problem_edit;
 mod problem_file_download;
 mod problem_file_list;
 mod problem_file_view;
+mod problem_pages;
 mod record;
 mod register;
 mod submit;
@@ -78,6 +79,8 @@ enum Route {
     ProblemFileView { pid: Pid, path: String },
     #[route("/problem/:pid/files")]
     ProblemFileList { pid: Pid },
+    #[route("/problem_page/:index")]
+    ProblemPage { index: u64 },
 }
 
 use file_view::FileView;
@@ -93,6 +96,7 @@ use problem_edit::ProblemEdit;
 use problem_file_download::ProblemFileDownload;
 use problem_file_list::ProblemFileList;
 use problem_file_view::ProblemFileView;
+use problem_pages::ProblemPage;
 use record::Record;
 use register::UserRegister;
 use submit::Submit;

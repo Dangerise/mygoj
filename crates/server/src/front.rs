@@ -3,6 +3,7 @@ use super::problem::{
     can_manage_problem,
     files::{get_problem_file_meta, require_problem_file_download_token},
     get_problem, get_problem_editable, get_problem_front,
+    pages::{get_page_count, get_problems_page},
 };
 use super::record::{get_record, submit};
 use super::user::{get_user_login, remove_token, user_login, user_register};
@@ -192,6 +193,15 @@ pub async fn receive_front_message(
         FrontMessage::GetProblemFileMeta(pid, path) => {
             let meta = get_problem_file_meta(logined_user.as_ref(), &pid, &path).await?;
             to_json(&meta)
+        }
+        FrontMessage::GetProblemsPage(index) => {
+            let page = get_problems_page(index).await?;
+            let page: Vec<_> = page.iter().map(|d| d.profile()).collect();
+            to_json(&page)
+        }
+        FrontMessage::GetProblemsPageCount => {
+            let count = get_page_count().await?;
+            to_json(&count)
         }
     }
 }

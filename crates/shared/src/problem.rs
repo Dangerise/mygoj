@@ -6,6 +6,12 @@ use uuid::Uuid;
 pub struct Pid(pub CompactString);
 
 #[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
+pub struct ProblemProfile {
+    pub pid: Pid,
+    pub title: CompactString,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone, PartialEq)]
 pub struct ProblemFront {
     pub pid: Pid,
     pub owner: Option<Uid>,

@@ -10,6 +10,7 @@ impl EmbedProblem for SimpleFs {
         Problem {
             pid: Pid::new("3"),
             owner: Some(Uid(1)),
+            created_time: chrono::Local::now().timestamp(),
             title: "simple_fs".into(),
             statement: "the statement of simplefs".to_string().into(),
             memory_limit: 0,
@@ -28,6 +29,7 @@ impl EmbedProblem for ComplexFs {
     fn base() -> Problem {
         Problem {
             pid: Pid::new("2"),
+            created_time: chrono::Local::now().timestamp(),
             owner: None,
             title: "complex_fs".into(),
             statement: "none statment".to_string().into(),
@@ -48,6 +50,7 @@ impl EmbedProblem for ApB {
         Problem {
             pid: Pid::new("1"),
             owner: Some(Uid(1)),
+            created_time: chrono::Local::now().timestamp(),
             title: "A+B".into(),
             statement: include_str!("a+b/statement.md").to_string().into(),
             memory_limit: 512,

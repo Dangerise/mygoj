@@ -13,10 +13,12 @@ impl Problem {
         let pid = self.pid.0.as_str();
         let owner = self.owner.map(|x| x.0 as i64);
         let json = serde_json::to_string(self).unwrap();
+        let time = self.created_time;
         sqlx::query!(
-            "INSERT INTO problems (pid,owner,json) VALUES ($1,$2,$3)",
+            "INSERT INTO problems (pid,owner,created_time,json) VALUES ($1,$2,$3,$4)",
             pid,
             owner,
+            time,
             json
         )
         .execute(pool)

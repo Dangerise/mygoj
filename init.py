@@ -2,6 +2,7 @@ import os
 import sqlite3
 
 os.makedirs("tmp", exist_ok=True)
+os.remove("tmp/empty.db")
 
 con = sqlite3.connect("./tmp/empty.db")
 

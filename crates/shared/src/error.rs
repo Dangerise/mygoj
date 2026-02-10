@@ -43,6 +43,7 @@ mod on_server {
     }
 
     impl ServerError {
+        #[inline(always)]
         pub fn into_internal<E: Into<eyre::Report>>(err: E) -> Self {
             let report: eyre::Report = err.into();
             Self::Internal(format!("{:#?}", report))

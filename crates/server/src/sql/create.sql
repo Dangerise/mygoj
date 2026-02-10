@@ -21,11 +21,13 @@ CREATE INDEX idx_last_time ON tokens(last_time);
 
 CREATE TABLE problems(
     pid TEXT PRIMARY KEY,
+    created_time INT NOT NULL,
     owner INT,
     json TEXT
 );
 
 CREATE INDEX idx_problems_owner ON problems(owner);
+CREATE INDEX idx_problems_created_time ON problems(created_time);
 
 CREATE TABLE records(
     rid INTEGER PRIMARY KEY AUTOINCREMENT,
