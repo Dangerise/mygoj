@@ -6,7 +6,7 @@ pub fn Inner(list: Vec<ProblemProfile>, index: u64, count: u64) -> Element {
     let mut jump_to = use_signal(|| index);
     rsx! {
         for profile in list {
-            p {  
+            p {
                 Link {
                     to: Route::Problem {
                         pid: profile.pid.clone(),
